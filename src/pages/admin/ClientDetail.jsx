@@ -283,7 +283,7 @@ const ClientDetail = () => {
       {/* Tabs */}
       <div className="mb-6 border-b border-gray-200">
         <div className="flex gap-6">
-          {['Overview', 'Users', 'Avatars', 'Applications', 'Conversations Logs'].map((label, idx) => (
+          {['Overview', 'Users', 'Avatars', 'Application SIDs', 'Conversations Logs'].map((label, idx) => (
             <button
               key={label}
               className={`py-2 px-4 font-semibold border-b-2 transition-colors ${tab === idx ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-blue-600'}`}
@@ -450,6 +450,68 @@ const ClientDetail = () => {
                   </div>
                 </form>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+      {tab === 3 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <Typography variant="h5">Application SIDs</Typography>
+            <div className="text-sm text-gray-600">
+              Total SIDs: {client?.application_sid?.length || 0}
+            </div>
+          </div>
+          
+          {client?.application_sid && client.application_sid.length > 0 ? (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border border-gray-200">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border border-gray-200 p-3 text-left font-semibold">#</th>
+                      <th className="border border-gray-200 p-3 text-left font-semibold">Application SID</th>
+                      <th className="border border-gray-200 p-3 text-left font-semibold">Status</th>
+                      <th className="border border-gray-200 p-3 text-left font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {client.application_sid.map((sid, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-200 p-3">
+                          <span className="font-semibold">{index + 1}</span>
+                        </td>
+                        <td className="border border-gray-200 p-3">
+                          <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                            {sid}
+                          </span>
+                        </td>
+                        <td className="border border-gray-200 p-3">
+                          <Badge color="green" className="uppercase">Active</Badge>
+                        </td>
+                                                 <td className="border border-gray-200 p-3">
+                           <Button 
+                             size="sm" 
+                             color="gray" 
+                             variant="outlined"
+                             onClick={() => {
+                               navigator.clipboard.writeText(sid);
+                               toast.success('SID copied to clipboard!');
+                             }}
+                           >
+                             Copy SID
+                           </Button>
+                         </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <p>No Application SIDs assigned to this client.</p>
+              <p className="text-sm mt-2">Application SIDs are used to identify and track client-specific conversations and activities.</p>
             </div>
           )}
         </div>
