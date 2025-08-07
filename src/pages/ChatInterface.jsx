@@ -174,7 +174,7 @@ const ChatInterface = () => {
 
       console.log('Conversation data to save:', JSON.stringify(conversationData, null, 2));
 
-      const response = await axios.post('http://localhost:5000/api/conversations/save', conversationData, {
+      const response = await axios.post('https://ui-api.torisedigital.com/api/conversations/save', conversationData, {
         timeout: 10000,
         headers: { 'Content-Type': 'application/json' }
       });

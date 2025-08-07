@@ -29,7 +29,7 @@ const Report = () => {
     useEffect(() => {
       const fetchData = async () => {
         try {
-          const res = await fetch(`http://localhost:5000/api/conver`);
+          const res = await fetch(`https://ui-api.torisedigital.com/api/conver`);
           const data = await res.json();
           setConversationData(data);
         } catch (err) {
