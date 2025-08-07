@@ -49,7 +49,7 @@ const ChatInterface = () => {
 
   const fetchBotInfo = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/admin/bots/${botId}`);
+      const response = await axios.get(`https://ui-api.torisedigital.com/api/admin/bots/${botId}`);
       const bot = response.data;
       
       if (!bot || !bot.active) {
