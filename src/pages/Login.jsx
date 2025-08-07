@@ -42,7 +42,7 @@ const Login = () => {
                 <Lock className="h-8 w-8 text-white" />
               </div>
               <Typography variant="h3" color="blue-gray" className="font-bold mb-1 text-center">
-                Torise Login
+                Torise Logins
               </Typography>
               <Typography color="gray" className="text-center text-base opacity-80">
                 Welcome back! Please sign in to your  account.
