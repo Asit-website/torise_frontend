@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: '0.0.0.0',  // 🌟 यह जरूरी है
+    host: '0.0.0.0', // 🌟 यह जरूरी है
     port: 5001,
     proxy: {
       '/api': {
@@ -13,5 +13,6 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    allowedHosts: ['ui.torisedigital.com'], // ✅ Add your domain here
   },
 });
