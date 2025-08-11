@@ -49,7 +49,7 @@ const ChatInterface = () => {
 
   const fetchBotInfo = async () => {
     try {
-      const response = await axios.get(`https://ui-api.torisedigital.com/api/admin/bots/${botId}`);
+      const response = await axios.get(`https://torise-backend-1.onrender.com/api/admin/bots/${botId}`);
       const bot = response.data;
       
       if (!bot || !bot.active) {
@@ -157,6 +157,7 @@ const ChatInterface = () => {
       const conversationData = {
         conversation_id: sessionId,
         bot_id: botId,
+        client_id: botInfo?.clientId, // Add client_id from bot info
         channel_type: 'chat',
         user_details: userDetails,
         message_log: messages.map(msg => ({
@@ -174,7 +175,7 @@ const ChatInterface = () => {
 
       console.log('Conversation data to save:', JSON.stringify(conversationData, null, 2));
 
-      const response = await axios.post('https://ui-api.torisedigital.com/api/conversations/save', conversationData, {
+      const response = await axios.post('https://torise-backend-1.onrender.com/api/conversations/save', conversationData, {
         timeout: 10000,
         headers: { 'Content-Type': 'application/json' }
       });

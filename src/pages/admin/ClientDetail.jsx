@@ -70,23 +70,26 @@ const ClientDetail = () => {
     
     setLoadingLogs(true);
     try {
-      // Fetch logs for this client's application SIDs
-      const applicationSids = client.application_sid || [];
       let allLogs = [];
       
-      if (applicationSids.length === 0) {
-        // If no application SIDs, fetch all logs for this client
-        const response = await api.get('/api/conversations', {
+      // First, fetch logs by client_id (for chat conversations)
+      try {
+        const clientResponse = await api.get('/api/conversations', {
           params: { 
             clientId: client._id,
             limit: 100
           }
         });
-        if (response.data && response.data.conversations) {
-          allLogs = response.data.conversations;
+        if (clientResponse.data && clientResponse.data.conversations) {
+          allLogs = [...allLogs, ...clientResponse.data.conversations];
         }
-      } else {
-        // Fetch logs for each application SID
+      } catch (error) {
+        console.error('Error fetching logs by client_id:', error);
+      }
+      
+      // Then, fetch logs for this client's application SIDs (for voice conversations)
+      const applicationSids = client.application_sid || [];
+      if (applicationSids.length > 0) {
         for (const sid of applicationSids) {
           try {
             const response = await api.get('/api/conversations', {
@@ -104,11 +107,16 @@ const ClientDetail = () => {
         }
       }
       
-      // Sort by date (newest first)
-      allLogs.sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
-      setConversationLogs(allLogs);
+      // Remove duplicates based on call_sid
+      const uniqueLogs = allLogs.filter((log, index, self) => 
+        index === self.findIndex(l => l.call_sid === log.call_sid)
+      );
       
-      console.log(`Fetched ${allLogs.length} conversation logs for client ${client.name}`);
+      // Sort by date (newest first)
+      uniqueLogs.sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
+      setConversationLogs(uniqueLogs);
+      
+      console.log(`Fetched ${uniqueLogs.length} conversation logs for client ${client.name}`);
     } catch (error) {
       console.error('Error fetching conversation logs:', error);
       toast.error('Failed to fetch conversation logs');
@@ -233,6 +241,93 @@ const ClientDetail = () => {
   const handleItemsPerPageChange = (newItemsPerPage) => {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
+  // PDF Download Function
+  const downloadTranscriptionAsPDF = () => {
+    if (!selectedConversation?.message_log?.length) {
+      toast.error('No messages to download');
+      return;
+    }
+
+    try {
+      // Create PDF content
+      const conversationId = selectedConversation?.call_sid || selectedConversation?.conversation_id || 'Unknown';
+      const date = selectedConversation?.created_at ? new Date(selectedConversation.created_at).toLocaleDateString() : 'Unknown';
+      const channelType = selectedConversation?.channel_type || 'Unknown';
+      const applicationSid = selectedConversation?.application_sid || 'N/A';
+      
+      let pdfContent = `
+        <html>
+          <head>
+            <title>Conversation Transcript - ${conversationId}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+              .metadata { background: #f5f5f5; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+              .metadata table { width: 100%; }
+              .metadata td { padding: 5px; }
+              .message { margin: 10px 0; padding: 10px; border-radius: 5px; }
+              .user-message { background: #e8f5e8; border-left: 4px solid #28a745; margin-left: 20px; }
+              .agent-message { background: #f0f0f0; border-left: 4px solid #007bff; margin-right: 20px; }
+              .timestamp { font-size: 12px; color: #666; margin-top: 5px; }
+              .sender { font-weight: bold; margin-bottom: 5px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>Conversation Transcript</h1>
+              <h2>${conversationId}</h2>
+            </div>
+            
+            <div class="metadata">
+              <table>
+                <tr><td><strong>Date:</strong></td><td>${date}</td></tr>
+                <tr><td><strong>Channel Type:</strong></td><td>${channelType}</td></tr>
+                <tr><td><strong>Application SID:</strong></td><td>${applicationSid}</td></tr>
+                <tr><td><strong>Total Messages:</strong></td><td>${selectedConversation.message_log.length}</td></tr>
+              </table>
+            </div>
+            
+            <h3>Conversation Messages:</h3>
+      `;
+
+      // Add each message to PDF content
+      selectedConversation.message_log.forEach((message, index) => {
+        const isUser = message.sender === 'user';
+        const timestamp = message.timestamp ? new Date(message.timestamp).toLocaleString() : '—';
+        const sender = isUser ? 'User' : 'Agent';
+        
+        pdfContent += `
+          <div class="message ${isUser ? 'user-message' : 'agent-message'}">
+            <div class="sender">${sender}</div>
+            <div>${message.message}</div>
+            <div class="timestamp">${timestamp}</div>
+          </div>
+        `;
+      });
+
+      pdfContent += `
+          </body>
+        </html>
+      `;
+
+      // Create blob and download
+      const blob = new Blob([pdfContent], { type: 'text/html' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `conversation-${conversationId}-${date}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Conversation transcript downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download transcript');
+    }
   };
 
   if (loading) {
@@ -563,11 +658,12 @@ const ClientDetail = () => {
                            <span className="text-gray-700">{log.application_sid || 'N/A'}</span>
                          </td>
                          <td className="border border-gray-200 p-3">
-                           <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                             log.channel_type === 'voice' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
-                           }`}>
-                             {log.channel_type || 'N/A'}
-                           </span>
+                                                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                              log.channel_type === 'voice' ? 'bg-blue-100 text-blue-800' : 
+                              log.channel_type === 'chat' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
+                            }`}>
+                              {log.channel_type || 'N/A'}
+                            </span>
                          </td>
                          <td className="border border-gray-200 p-3">
                            <span className="text-gray-700">{log.from_number || log.calling_number || 'N/A'}</span>
@@ -729,38 +825,52 @@ const ClientDetail = () => {
                    </div>
                  )}
 
-                 {activeTab === "Transcription" && (
-                   <div>
-                     <div ref={transcriptionRef} className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
-                       {selectedConversation?.message_log?.length ? (
-                         selectedConversation.message_log.map((e, i) => {
-                           const isUser = e.sender === "user";
-                           const timestamp = e.timestamp
-                             ? new Date(e.timestamp).toLocaleString()
-                             : "—";
-                           return (
-                             <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-                               <div className="max-w-[80%]">
-                                 <div
-                                   className={`rounded-xl px-4 py-2 text-sm shadow ${
-                                     isUser
-                                       ? "bg-green-50 text-gray-800 border border-green-200"
-                                       : "bg-gray-100 text-gray-900 border border-gray-300"
-                                   }`}
-                                 >
-                                   {e.message}
-                                 </div>
-                                 <div className="text-xs text-gray-500 mt-1">{timestamp}</div>
-                               </div>
-                             </div>
-                           );
-                         })
-                       ) : (
-                         <div className="text-sm text-gray-500">No messages found.</div>
-                       )}
-                     </div>
-                   </div>
-                 )}
+                                   {activeTab === "Transcription" && (
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="text-sm font-semibold">Conversation Messages</h4>
+                        {selectedConversation?.message_log?.length > 0 && (
+                          <Button 
+                            size="sm" 
+                            color="blue" 
+                            variant="outlined"
+                            onClick={() => downloadTranscriptionAsPDF()}
+                            className="flex items-center gap-2"
+                          >
+                            📄 Download PDF
+                          </Button>
+                        )}
+                      </div>
+                      <div ref={transcriptionRef} className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
+                        {selectedConversation?.message_log?.length ? (
+                          selectedConversation.message_log.map((e, i) => {
+                            const isUser = e.sender === "user";
+                            const timestamp = e.timestamp
+                              ? new Date(e.timestamp).toLocaleString()
+                              : "—";
+                            return (
+                              <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                                <div className="max-w-[80%]">
+                                  <div
+                                    className={`rounded-xl px-4 py-2 text-sm shadow ${
+                                      isUser
+                                        ? "bg-green-50 text-gray-800 border border-green-200"
+                                        : "bg-gray-100 text-gray-900 border border-gray-300"
+                                    }`}
+                                  >
+                                    {e.message}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">{timestamp}</div>
+                                </div>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div className="text-sm text-gray-500">No messages found.</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                </div>
 
                {/* Right metadata panel */}

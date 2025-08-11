@@ -9,7 +9,7 @@ export default defineConfig({
     port: 5001,
     proxy: {
       '/api': {
-        target: 'https://ui-api.torisedigital.com',
+        target: 'https://torise-backend-1.onrender.com',
         changeOrigin: true,
       },
     },

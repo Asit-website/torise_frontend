@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'https://ui-api.torisedigital.com', // Force correct backend URL for local dev
+  baseURL: 'https://torise-backend-1.onrender.com', // Force correct backend URL for local dev
   headers: {
     'Content-Type': 'application/json',
   },
