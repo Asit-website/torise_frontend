@@ -21,7 +21,11 @@ const ChatInterface = () => {
     try {
       setLoading(true);
       const response = await api.get('/api/admin/bots?type=chat');
-      setBots(response.data.bots || []);
+      // Filter bots that have valid webhook URLs
+      const validBots = (response.data.bots || []).filter(bot => 
+        bot.webhook_url && bot.webhook_url.trim() !== ''
+      );
+      setBots(validBots);
     } catch (error) {
       console.error('Error fetching chat bots:', error);
       toast.error('Failed to fetch chat bots');
@@ -115,17 +119,27 @@ const ChatInterface = () => {
                       {bot.user_prompt_fields?.length || 0} fields
                     </span>
                   </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Webhook URL:</span>
+                    <span className={`text-sm font-medium ${
+                      bot.webhook_url ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {bot.webhook_url ? '✓ Configured' : '✗ Missing'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleTestChat(bot)}
-                    disabled={!bot.active}
+                    disabled={!bot.active || !bot.webhook_url}
                     className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                      bot.active
+                      bot.active && bot.webhook_url
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
+                    title={!bot.webhook_url ? 'No webhook URL configured' : 'Test Chat'}
                   >
                     Test Chat
                   </button>

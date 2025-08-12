@@ -86,8 +86,10 @@ const Reports = () => {
           index === self.findIndex(c => c.call_sid === conv.call_sid)
         );
         
-        console.log('Final filtered data:', uniqueConversations.length);
-        setConversationData(uniqueConversations);
+              console.log('Final filtered data:', uniqueConversations.length);
+      setConversationData(uniqueConversations);
+      // Reset to first page when data changes
+      setCurrentPage(1);
       } catch (err) {
         console.error("Failed to fetch conversations", err);
       }
@@ -136,10 +138,22 @@ const Reports = () => {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
+  
+  // Ensure current page is valid
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  if (validCurrentPage !== currentPage) {
+    setCurrentPage(validCurrentPage);
+  }
 
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    } else if (pageNumber > totalPages) {
+      setCurrentPage(totalPages);
+    } else if (pageNumber < 1) {
+      setCurrentPage(1);
+    }
   };
 
   const handleItemsPerPageChange = (newItemsPerPage) => {
@@ -438,7 +452,7 @@ const Reports = () => {
             <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border-t border-gray-200">
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-700">
-                  Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredData.length)} of {filteredData.length} results
+                  Showing {filteredData.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, filteredData.length)} of {filteredData.length} results
                 </span>
                 <select
                   value={itemsPerPage}
@@ -461,7 +475,7 @@ const Reports = () => {
                   Previous
                 </button>
                 
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   let pageNumber;
                   if (totalPages <= 5) {
                     pageNumber = i + 1;

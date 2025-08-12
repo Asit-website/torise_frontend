@@ -245,10 +245,20 @@ const Bots = () => {
     }
 
     // Check webhook validation for chat bots
-    if (formData.type === 'chat' && !webhookValid) {
-      toast.error('Please provide a valid webhook URL to create a chat bot');
-      setActionLoading(false);
-      return;
+    if (formData.type === 'chat') {
+      if (!webhookValid) {
+        toast.error('Please provide a valid webhook URL to create a chat bot');
+        setActionLoading(false);
+        return;
+      }
+      
+      // Double-check webhook validation before creating
+      const isValid = await validateWebhookUrl(formData.webhook_url);
+      if (!isValid) {
+        toast.error('Webhook URL validation failed. Please check the URL and try again.');
+        setActionLoading(false);
+        return;
+      }
     }
     // Only validate these fields for voice bots
     if (formData.type === 'voice') {
@@ -331,10 +341,20 @@ const Bots = () => {
     setActionLoading(true);
     
     // Check webhook validation for chat bots
-    if (formData.type === 'chat' && !webhookValid) {
-      toast.error('Please provide a valid webhook URL to update this chat bot');
-      setActionLoading(false);
-      return;
+    if (formData.type === 'chat') {
+      if (!webhookValid) {
+        toast.error('Please provide a valid webhook URL to update this chat bot');
+        setActionLoading(false);
+        return;
+      }
+      
+      // Double-check webhook validation before updating
+      const isValid = await validateWebhookUrl(formData.webhook_url);
+      if (!isValid) {
+        toast.error('Webhook URL validation failed. Please check the URL and try again.');
+        setActionLoading(false);
+        return;
+      }
     }
     
     try {

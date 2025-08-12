@@ -47,6 +47,28 @@ const ChatInterface = () => {
   //   };
   // }, [messages]);
 
+  // Validate webhook URL
+  const validateWebhookUrl = async (url) => {
+    try {
+      const testPayload = {
+        message: 'test',
+        sessionId: 'test_session',
+        timestamp: new Date().toISOString()
+      };
+
+      const response = await axios.post(url, testPayload, {
+        timeout: 5000,
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      // Check if response is ok and has expected structure
+      return response.status >= 200 && response.status < 300;
+    } catch (error) {
+      console.error('Webhook validation failed:', error);
+      return false;
+    }
+  };
+
   const fetchBotInfo = async () => {
     try {
       const response = await axios.get(`https://torise-backend-1.onrender.com/api/admin/bots/${botId}`);
@@ -54,6 +76,19 @@ const ChatInterface = () => {
       
       if (!bot || !bot.active) {
         setError('Bot not found or inactive');
+        return;
+      }
+
+      // Check if bot has webhook URL for chat functionality
+      if (!bot.webhook_url || bot.webhook_url.trim() === '') {
+        setError('This bot is not configured for chat. Please contact the administrator.');
+        return;
+      }
+
+      // Validate webhook URL
+      const isWebhookValid = await validateWebhookUrl(bot.webhook_url);
+      if (!isWebhookValid) {
+        setError('This bot\'s webhook URL is not responding correctly. Please contact the administrator.');
         return;
       }
 
@@ -87,7 +122,17 @@ const ChatInterface = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!currentMessage.trim() || !botInfo || !botInfo.webhook_url) return;
+    if (!currentMessage.trim() || !botInfo || !botInfo.webhook_url || botInfo.webhook_url.trim() === '') {
+      setError('Chat is not available for this bot. Please contact the administrator.');
+      return;
+    }
+
+    // Validate webhook URL before sending message
+    const isWebhookValid = await validateWebhookUrl(botInfo.webhook_url);
+    if (!isWebhookValid) {
+      setError('Webhook URL is not responding. Please contact the administrator.');
+      return;
+    }
 
     const userMessage = {
       id: Date.now(),
@@ -145,6 +190,19 @@ const ChatInterface = () => {
   };
 
   const saveConversationToDatabase = async () => {
+    // Don't save if bot doesn't have webhook URL
+    if (!botInfo || !botInfo.webhook_url || botInfo.webhook_url.trim() === '') {
+      console.log('❌ Not saving conversation - bot has no webhook URL');
+      return;
+    }
+
+    // Validate webhook URL before saving
+    const isWebhookValid = await validateWebhookUrl(botInfo.webhook_url);
+    if (!isWebhookValid) {
+      console.log('❌ Not saving conversation - webhook URL is invalid');
+      return;
+    }
+
     try {
       console.log('💾 Saving conversation to database...');
       console.log('Messages to save:', messages);
@@ -341,13 +399,13 @@ const ChatInterface = () => {
             type="text"
             value={currentMessage}
             onChange={(e) => setCurrentMessage(e.target.value)}
-            placeholder="Type your message..."
-            disabled={isLoading}
+            placeholder={botInfo?.webhook_url ? "Type your message..." : "Chat not available"}
+            disabled={isLoading || !botInfo?.webhook_url}
             className="chat-input"
           />
           <button 
             type="submit" 
-            disabled={!currentMessage.trim() || isLoading}
+            disabled={!currentMessage.trim() || isLoading || !botInfo?.webhook_url}
             className="send-btn"
           >
             Send

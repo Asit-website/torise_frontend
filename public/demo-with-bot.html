@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget Demo - Bot ID: 687fd45b998676bde66dd2e9</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .content-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .content-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .content-card h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        .content-card p {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+        
+        .bot-info {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #2196f3;
+            margin: 20px 0;
+        }
+        
+        .bot-info h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        
+        .bot-info .bot-id {
+            background: #333;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .feature {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .feature-icon {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+        }
+        
+        .feature h4 {
+            color: #333;
+            margin: 0 0 10px 0;
+        }
+        
+        .feature p {
+            color: #666;
+            font-size: 0.9em;
+            margin: 0;
+        }
+        
+        .test-instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .test-instructions h3 {
+            color: #856404;
+            margin-top: 0;
+        }
+        
+        .test-instructions ol {
+            color: #856404;
+            line-height: 1.8;
+        }
+        
+        .test-instructions li {
+            margin-bottom: 10px;
+        }
+        
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 10000;
+        }
+        
+        .footer {
+            background: rgba(0,0,0,0.1);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+        }
+        
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-indicator" id="status-indicator">
+        🟢 Widget Ready
+    </div>
+    
+    <div class="header">
+        <h1>🚀 Chat Widget Demo</h1>
+        <p>Testing with your specific bot ID</p>
+    </div>
+    
+    <div class="container">
+        <div class="bot-info">
+            <h3>🤖 Bot Configuration</h3>
+            <p><strong>Bot ID:</strong> <span class="bot-id">687fd45b998676bde66dd2e9</span></p>
+            <p><strong>Status:</strong> <span id="bot-status">Checking...</span></p>
+            <p><strong>API URL:</strong> https://torise-backend-1.onrender.com</p>
+        </div>
+        
+        <div class="content-grid">
+            <div class="content-card">
+                <h2>📋 How to Test</h2>
+                <div class="test-instructions">
+                    <h3>🧪 Testing Steps:</h3>
+                    <ol>
+                        <li><strong>Look for the chat button</strong> in the bottom-right corner</li>
+                        <li><strong>Click the chat button</strong> to open the widget</li>
+                        <li><strong>Fill in your details:</strong> Name, Email, Mobile</li>
+                        <li><strong>Click "Start Chat"</strong> to begin</li>
+                        <li><strong>Type a message</strong> and press Enter</li>
+                        <li><strong>Check the response</strong> from your N8N webhook</li>
+                    </ol>
+                </div>
+            </div>
+            
+            <div class="content-card">
+                <h2>🔧 Technical Details</h2>
+                <p><strong>Widget Script:</strong> chat-widget.js</p>
+                <p><strong>Initialization:</strong> ChatWidget.init('687fd45b998676bde66dd2e9')</p>
+                <p><strong>API Endpoint:</strong> GET /api/admin/bots/687fd45b998676bde66dd2e9</p>
+                <p><strong>Webhook Integration:</strong> Direct N8N connection</p>
+                <p><strong>Conversation Logging:</strong> Automatic database save</p>
+            </div>
+        </div>
+        
+        <div class="content-card">
+            <h2>✨ Widget Features</h2>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">👤</div>
+                    <h4>User Details</h4>
+                    <p>Captures name, email, and mobile automatically</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <h4>N8N Integration</h4>
+                    <p>Direct webhook connection for intelligent responses</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">💾</div>
+                    <h4>Auto Save</h4>
+                    <p>All conversations saved to database</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <h4>Responsive</h4>
+                    <p>Works perfectly on all devices</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h4>Real-time</h4>
+                    <p>Instant messaging with typing indicators</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎨</div>
+                    <h4>Customizable</h4>
+                    <p>Easy to style and configure</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content-card">
+            <h2>📝 Integration Code</h2>
+            <p>To add this widget to any website, use this code:</p>
+            <div style="background: #2d3748; color: #e2e8f0; padding: 20px; border-radius: 10px; font-family: monospace; overflow-x: auto;">
+                &lt;!-- Chat Widget --&gt;<br>
+                &lt;script src="http://localhost:5001/chat-widget.js"&gt;&lt;/script&gt;<br>
+                &lt;script&gt;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;ChatWidget.init('687fd45b998676bde66dd2e9');<br>
+                &lt;/script&gt;
+            </div>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <p>Chat Widget Demo - Bot ID: 687fd45b998676bde66dd2e9</p>
+        <p>Make sure your backend server and N8N webhook are running!</p>
+    </div>
+
+    <!-- Chat Widget -->
+    <script src="chat-widget.js"></script>
+    <script>
+        // Initialize the chat widget with your specific bot ID
+        const botId = '687fd45b998676bde66dd2e9';
+        
+        // Check bot status
+        async function checkBotStatus() {
+            try {
+                const response = await fetch(`https://torise-backend-1.onrender.com/api/admin/bots/${botId}`);
+                if (response.ok) {
+                    const bot = await response.json();
+                    document.getElementById('bot-status').textContent = `✅ Active - ${bot.name}`;
+                    document.getElementById('bot-status').style.color = '#28a745';
+                    
+                    if (bot.webhook_url) {
+                        document.getElementById('status-indicator').innerHTML = '🟢 Widget Ready (Webhook Configured)';
+                    } else {
+                        document.getElementById('status-indicator').innerHTML = '🟡 Widget Ready (No Webhook)';
+                        document.getElementById('status-indicator').style.background = '#ffc107';
+                        document.getElementById('status-indicator').style.color = '#333';
+                    }
+                } else {
+                    document.getElementById('bot-status').textContent = '❌ Bot not found';
+                    document.getElementById('bot-status').style.color = '#dc3545';
+                    document.getElementById('status-indicator').innerHTML = '🔴 Widget Error';
+                    document.getElementById('status-indicator').style.background = '#dc3545';
+                }
+            } catch (error) {
+                document.getElementById('bot-status').textContent = '❌ Connection error';
+                document.getElementById('bot-status').style.color = '#dc3545';
+                document.getElementById('status-indicator').innerHTML = '🔴 Connection Error';
+                document.getElementById('status-indicator').style.background = '#dc3545';
+            }
+        }
+        
+        // Initialize widget
+        ChatWidget.init(botId);
+        
+        // Check bot status after a short delay
+        setTimeout(checkBotStatus, 1000);
+        
+        // Update status indicator
+        document.getElementById('status-indicator').innerHTML = '🟡 Initializing...';
+        document.getElementById('status-indicator').style.background = '#ffc107';
+        document.getElementById('status-indicator').style.color = '#333';
+        
+        // Add some sample content to test scrolling
+        setTimeout(() => {
+            const container = document.querySelector('.container');
+            const sampleCard = document.createElement('div');
+            sampleCard.className = 'content-card';
+            sampleCard.innerHTML = `
+                <h2>📄 Sample Content</h2>
+                <p>This is additional content to test scrolling. The chat widget should remain fixed in the bottom-right corner regardless of page content.</p>
+                <p>You can scroll up and down this page, and the widget will stay in position. This demonstrates the widget's fixed positioning and overlay behavior.</p>
+            `;
+            container.appendChild(sampleCard);
+        }, 2000);
+    </script>
+</body>
+</html>

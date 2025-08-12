@@ -115,6 +115,8 @@ const ClientDetail = () => {
       // Sort by date (newest first)
       uniqueLogs.sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
       setConversationLogs(uniqueLogs);
+      // Reset to first page when data changes
+      setCurrentPage(1);
       
       console.log(`Fetched ${uniqueLogs.length} conversation logs for client ${client.name}`);
     } catch (error) {
@@ -232,10 +234,22 @@ const ClientDetail = () => {
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = conversationLogs.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(conversationLogs.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(conversationLogs.length / itemsPerPage));
+  
+  // Ensure current page is valid
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  if (validCurrentPage !== currentPage) {
+    setCurrentPage(validCurrentPage);
+  }
 
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    } else if (pageNumber > totalPages) {
+      setCurrentPage(totalPages);
+    } else if (pageNumber < 1) {
+      setCurrentPage(1);
+    }
   };
 
   const handleItemsPerPageChange = (newItemsPerPage) => {
@@ -711,7 +725,7 @@ const ClientDetail = () => {
               <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border-t border-gray-200">
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-700">
-                    Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, conversationLogs.length)} of {conversationLogs.length} results
+                    Showing {conversationLogs.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, conversationLogs.length)} of {conversationLogs.length} results
                   </span>
                   <select
                     value={itemsPerPage}
@@ -734,7 +748,7 @@ const ClientDetail = () => {
                     Previous
                   </button>
                   
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNumber;
                     if (totalPages <= 5) {
                       pageNumber = i + 1;

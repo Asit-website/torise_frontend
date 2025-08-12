@@ -23,6 +23,7 @@ const ConversationLogs = () => {
       try {
         const res = await fetch(`/api/conversations`);
         const data = await res.json();
+        console.log('Fetched conversations data:', data);
         setConversationData(data.conversations || data); // support both array and {conversations: []}
       } catch (err) {
         console.error("Failed to fetch conversations", err);
@@ -44,6 +45,8 @@ const ConversationLogs = () => {
     } else {
       setFilteredData(conversationData);
     }
+    // Reset to first page when data changes
+    setCurrentPage(1);
   }, [fromDate, toDate, conversationData]);
 
   const handleOpen = (conversation) => {
@@ -83,14 +86,33 @@ const ConversationLogs = () => {
     }
   };
 
+  // Apply duration filter to filteredData
+  const durationFilteredData = filteredData.filter((item) => {
+    if (!durationFilter) return true;
+    const duration = item?.duration_minutes?.toString() || "";
+    return duration.includes(durationFilter);
+  });
+
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const currentItems = durationFilteredData.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.max(1, Math.ceil(durationFilteredData.length / itemsPerPage));
+  
+  // Ensure current page is valid
+  const validCurrentPage = Math.min(currentPage, totalPages);
+  if (validCurrentPage !== currentPage) {
+    setCurrentPage(validCurrentPage);
+  }
 
   const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    } else if (pageNumber > totalPages) {
+      setCurrentPage(totalPages);
+    } else if (pageNumber < 1) {
+      setCurrentPage(1);
+    }
   };
 
   const handleItemsPerPageChange = (newItemsPerPage) => {
@@ -348,13 +370,7 @@ const ConversationLogs = () => {
                 </tr>
               </thead>
               <tbody>
-                                  {currentItems
-                    .filter((item) => {
-                      if (!durationFilter) return true;
-                      const duration = item?.duration_minutes?.toString() || "";
-                      return duration.includes(durationFilter);
-                    })
-                    .map((item) => {
+                {currentItems.map((item) => {
                     const className = "py-3 px-4 border-b border-gray-200 hover:bg-gray-50";
                     const isChecked = selectedRows.includes(item.call_sid);
                     return (
@@ -423,7 +439,7 @@ const ConversationLogs = () => {
           <div className="flex items-center justify-between mt-4 px-4 py-3 bg-white border-t border-gray-200">
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-700">
-                Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredData.length)} of {filteredData.length} results
+                Showing {durationFilteredData.length > 0 ? indexOfFirstItem + 1 : 0} to {Math.min(indexOfLastItem, durationFilteredData.length)} of {durationFilteredData.length} results
               </span>
               <select
                 value={itemsPerPage}
@@ -446,7 +462,7 @@ const ConversationLogs = () => {
                 Previous
               </button>
               
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                 let pageNumber;
                 if (totalPages <= 5) {
                   pageNumber = i + 1;

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .debug-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Chat Widget Test</h1>
+        
+        <div id="status" class="status info">Loading widget...</div>
+        
+        <div class="debug-info">
+            <strong>Debug Info:</strong><br>
+            <span id="debug-info">Initializing...</span>
+        </div>
+        
+        <button onclick="forceInitWidget()">Force Initialize Widget</button>
+        <button onclick="checkWidgetElements()">Check Widget Elements</button>
+        <button onclick="showWidget()">Show Widget</button>
+        
+        <div id="console-output" class="debug-info">
+            <strong>Console Output:</strong><br>
+            <div id="console-content"></div>
+        </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <script src="chat-widget.js"></script>
+    <script>
+        let widgetInitialized = false;
+        
+        function log(message) {
+            console.log(message);
+            const consoleContent = document.getElementById('console-content');
+            consoleContent.innerHTML += new Date().toLocaleTimeString() + ': ' + message + '<br>';
+        }
+        
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+        
+        function updateDebugInfo(info) {
+            document.getElementById('debug-info').textContent = info;
+        }
+        
+        function forceInitWidget() {
+            log('Force initializing widget...');
+            try {
+                if (typeof ChatWidget !== 'undefined') {
+                    ChatWidget.init('687fd45b998676bde66dd2e9');
+                    widgetInitialized = true;
+                    updateStatus('Widget initialized successfully!', 'success');
+                    log('Widget initialized with bot ID: 687fd45b998676bde66dd2e9');
+                } else {
+                    updateStatus('ChatWidget not found!', 'error');
+                    log('ERROR: ChatWidget object not found');
+                }
+            } catch (error) {
+                updateStatus('Error initializing widget: ' + error.message, 'error');
+                log('ERROR: ' + error.message);
+            }
+        }
+        
+        function checkWidgetElements() {
+            log('Checking widget elements...');
+            
+            const toggle = document.getElementById('chat-widget-toggle');
+            const container = document.getElementById('chat-widget-container');
+            
+            if (toggle) {
+                log('✅ Toggle button found');
+                log('Toggle display: ' + toggle.style.display);
+                log('Toggle position: ' + toggle.style.position);
+            } else {
+                log('❌ Toggle button not found');
+            }
+            
+            if (container) {
+                log('✅ Container found');
+                log('Container display: ' + container.style.display);
+            } else {
+                log('❌ Container not found');
+            }
+            
+            updateDebugInfo('Toggle: ' + (toggle ? 'Found' : 'Not found') + 
+                          ' | Container: ' + (container ? 'Found' : 'Not found'));
+        }
+        
+        function showWidget() {
+            log('Attempting to show widget...');
+            const toggle = document.getElementById('chat-widget-toggle');
+            const container = document.getElementById('chat-widget-container');
+            
+            if (toggle) {
+                toggle.style.display = 'flex';
+                log('✅ Toggle button shown');
+            }
+            
+            if (container) {
+                container.style.display = 'block';
+                log('✅ Container shown');
+            }
+        }
+        
+        // Auto-initialize on page load
+        window.addEventListener('load', function() {
+            log('Page loaded, checking ChatWidget...');
+            
+            if (typeof ChatWidget !== 'undefined') {
+                log('✅ ChatWidget found');
+                updateStatus('ChatWidget loaded, initializing...', 'info');
+                
+                setTimeout(() => {
+                    forceInitWidget();
+                }, 1000);
+            } else {
+                log('❌ ChatWidget not found');
+                updateStatus('ChatWidget not loaded!', 'error');
+            }
+        });
+        
+        // Check for widget elements every 2 seconds
+        setInterval(() => {
+            if (widgetInitialized) {
+                const toggle = document.getElementById('chat-widget-toggle');
+                if (toggle && toggle.style.display !== 'flex') {
+                    log('Widget toggle not visible, attempting to show...');
+                    toggle.style.display = 'flex';
+                }
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
