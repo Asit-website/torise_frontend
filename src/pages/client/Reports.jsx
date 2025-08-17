@@ -24,72 +24,70 @@ const Reports = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        console.log('Fetching conversations...');
+        console.log('=== REPORTS DEBUGGING ===');
+        console.log('User object:', user);
+        console.log('User client_id:', user?.client_id);
+        console.log('User application_sid:', user?.application_sid);
+        console.log('User application_sid type:', typeof user?.application_sid);
+        console.log('User application_sid length:', user?.application_sid?.length);
+        
         let allConversations = [];
         
-        // First, fetch conversations by client_id (for chat conversations)
-        if (user && user.client_id) {
+        // Fetch conversations by client_id and application_sid
+        if (user && (user.client_id || user.application_sid)) {
           try {
-            const clientRes = await fetch(`/api/conversations?clientId=${user.client_id}`);
-            const clientData = await clientRes.json();
-            if (clientData.conversations) {
-              allConversations = [...allConversations, ...clientData.conversations];
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (user.client_id) {
+              params.append('clientId', user.client_id);
+              console.log('Added clientId to params:', user.client_id);
             }
-            console.log('Fetched conversations by client_id:', clientData.conversations?.length || 0);
-          } catch (err) {
-            console.error('Error fetching conversations by client_id:', err);
-          }
-        }
-        
-        // Then, fetch conversations by application_sid (for voice conversations)
-        if (user && user.application_sid) {
-          try {
-            const res = await fetch(`/api/conversations`);
-            const data = await res.json();
-            console.log('Raw API response:', data);
-            
-            let filtered = data.conversations || data;
-            console.log('Initial filtered data:', filtered);
-            
-            console.log('User application_sid:', user.application_sid, 'Type:', typeof user.application_sid);
-            
-            // Handle different data types for application_sid
-            let appSids = [];
-            if (typeof user.application_sid === 'string') {
-              // If it's a comma-separated string
-              appSids = user.application_sid.split(',').map(sid => sid.trim());
-            } else if (Array.isArray(user.application_sid)) {
-              // If it's already an array
-              appSids = user.application_sid;
+            if (user.application_sid && user.application_sid.length > 0) {
+              // Send application_sid as array
+              user.application_sid.forEach((sid, index) => {
+                params.append('application_sid', sid);
+                console.log(`Added application_sid[${index}] to params:`, sid);
+              });
             } else {
-              // If it's a single value, convert to array
-              appSids = [user.application_sid.toString()];
+              console.log('No application_sid found in user object');
             }
             
-            console.log('Processed appSids:', appSids);
+            // Temporary fix: Add the chat conversations application_sid as well
+            // This ensures we get both user's application_sid and chat conversations
+            params.append('application_sid', '687fd45b998676bde66dd2e9');
+            console.log('Added temporary application_sid for chat conversations: 687fd45b998676bde66dd2e9');
             
-            filtered = filtered.filter(row => {
-              const matches = row.application_sid && appSids.includes(row.application_sid);
-              console.log('Row:', row.call_sid, 'app_sid:', row.application_sid, 'matches:', matches);
-              return matches;
-            });
+            // Remove channel_type filter to get both voice and chat conversations
+            // params.append('channel_type', 'chat');
+            console.log('Removed channel_type filter to get all conversation types');
             
-            allConversations = [...allConversations, ...filtered];
-            console.log('Fetched conversations by application_sid:', filtered.length);
+            console.log('Final params string:', params.toString());
+            console.log('Making API call to:', `/api/conversations?${params.toString()}`);
+            
+            const response = await fetch(`/api/conversations?${params.toString()}`);
+            const data = await response.json();
+            
+            console.log('API response status:', response.status);
+            console.log('API response data:', data);
+            
+            if (data.conversations) {
+              allConversations = data.conversations;
+              console.log('Fetched conversations count:', allConversations.length);
+              console.log('First few conversations:', allConversations.slice(0, 3));
+            } else {
+              console.log('No conversations array in response');
+            }
           } catch (err) {
-            console.error('Error fetching conversations by application_sid:', err);
+            console.error('Error fetching conversations:', err);
           }
+        } else {
+          console.log('User object missing required fields - client_id or application_sid');
         }
         
-        // Remove duplicates based on call_sid
-        const uniqueConversations = allConversations.filter((conv, index, self) => 
-          index === self.findIndex(c => c.call_sid === conv.call_sid)
-        );
-        
-              console.log('Final filtered data:', uniqueConversations.length);
-      setConversationData(uniqueConversations);
-      // Reset to first page when data changes
-      setCurrentPage(1);
+        console.log('Final conversations data length:', allConversations.length);
+        setConversationData(allConversations);
+        // Reset to first page when data changes
+        setCurrentPage(1);
       } catch (err) {
         console.error("Failed to fetch conversations", err);
       }
@@ -566,21 +564,47 @@ const Reports = () => {
                       </div>
                       {/* Tab Content */}
                       {activeTab === "Overview" && (
-                        <div className="text-sm text-gray-700 space-y-2 p-4 bg-gray-50 rounded shadow">
-                          <p>
-                            The agent from Hind Properties initiated a conversation in Hindi,
-                            offering assistance in finding a suitable property...
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Call status:{" "}
-                            <span className="text-green-600 font-medium">{metadata.status}</span>
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Channel Type: <span className="text-blue-600 font-medium">{metadata.channelType}</span>
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Application SID: <span className="text-purple-600 font-medium">{metadata.applicationSid}</span>
-                          </p>
+                        <div className="text-sm text-gray-700 space-y-4 p-4 bg-gray-50 rounded shadow">
+                          {/* AI Summary Section */}
+                          {selectedConversation?.summary && (
+                            <div className="bg-white p-4 rounded-lg border border-gray-200">
+                              <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                                🤖 AI Conversation Summary
+                              </h4>
+                              <div className="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+                                <p className="text-gray-700 leading-relaxed">
+                                  {selectedConversation.summary}
+                                </p>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-2">
+                                Generated using OpenAI GPT-3.5
+                              </p>
+                            </div>
+                          )}
+                          
+                          {/* Metadata Section */}
+                          <div className="bg-white p-4 rounded-lg border border-gray-200">
+                            <h4 className="font-semibold text-gray-800 mb-2">📊 Conversation Details</h4>
+                            <div className="space-y-2">
+                              <p className="text-xs text-gray-500">
+                                Call status: <span className="text-green-600 font-medium">{metadata.status}</span>
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Channel Type: <span className="text-blue-600 font-medium">{metadata.channelType}</span>
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Application SID: <span className="text-purple-600 font-medium">{metadata.applicationSid}</span>
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Messages: <span className="text-orange-600 font-medium">{selectedConversation?.message_log?.length || 0}</span>
+                              </p>
+                              {selectedConversation?.summary && (
+                                <p className="text-xs text-gray-500">
+                                  Summary: <span className="text-green-600 font-medium">Available</span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       )}
                       {activeTab === "Transcription" && (

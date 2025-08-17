@@ -7,7 +7,7 @@
         width: '350px',
         height: '500px',
         zIndex: 9999,
-        apiUrl: 'https://torise-backend-1.onrender.com', // Change this to your API URL
+        apiUrl: 'http://109.73.166.213:5000', // Change this to your API URL
         widgetUrl: 'http://localhost:5001' // Change this to your frontend URL
     };
     
@@ -326,23 +326,34 @@
             toggleButton.style.display = 'flex';
         }
     }
+
+
     
     // Add event listeners
     function addEventListeners() {
         // Toggle button
         const toggleButton = document.getElementById('chat-widget-toggle');
         if (toggleButton) {
-            toggleButton.addEventListener('click', toggleWidget);
+            toggleButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleWidget();
+            });
         }
         
         // Header controls
         const minimizeButton = document.getElementById('chat-widget-minimize');
         const closeButton = document.getElementById('chat-widget-close');
         if (minimizeButton) {
-            minimizeButton.addEventListener('click', toggleWidget);
+            minimizeButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleWidget();
+            });
         }
         if (closeButton) {
-            closeButton.addEventListener('click', closeWidget);
+            closeButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeWidget();
+            });
         }
         
         // User form
@@ -370,11 +381,13 @@
     }
     
     // Toggle widget
-    function toggleWidget() {
+    async function toggleWidget() {
         const container = document.getElementById('chat-widget-container');
         const toggle = document.getElementById('chat-widget-toggle');
         
         if (widgetState.isOpen) {
+            // Save conversation when minimizing
+            await saveConversation();
             container.style.display = 'none';
             toggle.style.display = 'flex';
         } else {
@@ -386,7 +399,10 @@
     }
     
     // Close widget
-    function closeWidget() {
+    async function closeWidget() {
+        // Save conversation before closing
+        await saveConversation();
+        
         document.getElementById('chat-widget-container').style.display = 'none';
         document.getElementById('chat-widget-toggle').style.display = 'flex';
         widgetState.isOpen = false;
@@ -405,6 +421,8 @@
         // Hide form and show chat
         document.getElementById('chat-widget-user-form').style.display = 'none';
         document.getElementById('chat-widget-input-container').style.display = 'block';
+        
+
         
         // Add welcome message
         addMessage('bot', 'Thank you! How can I help you today?');
@@ -450,29 +468,27 @@
                 return;
             }
             
-            // Send to N8N webhook
-            const n8nPayload = {
-                message: message,
-                sessionId: widgetState.sessionId,
-                timestamp: new Date().toISOString(),
-                userDetails: widgetState.userDetails
-            };
+            // Send to N8N webhook with query parameter format (like Postman)
+            const webhookUrl = `${bot.webhook_url}?message=${encodeURIComponent(message)}`;
             
-            const webhookResponse = await fetch(bot.webhook_url, {
+            const webhookResponse = await fetch(webhookUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(n8nPayload)
+                body: JSON.stringify({}) // Empty body since we're using query params
             });
             
             hideTypingIndicator();
             
             if (webhookResponse.ok) {
                 const webhookData = await webhookResponse.json();
+                console.log('🔗 Widget Webhook Response:', webhookData);
                 const botReply = webhookData.reply || 'Thank you for your message. I will get back to you soon.';
+                console.log('✅ Widget Using webhook reply:', botReply);
                 addMessage('bot', botReply);
             } else {
+                console.log('❌ Widget Webhook error:', webhookResponse.status);
                 addMessage('bot', 'I am currently processing your request. Please wait a moment.');
             }
             
@@ -539,10 +555,22 @@
         if (widgetState.messages.length === 0) return;
         
         try {
+            // Get bot info to get client_id
+            let clientId = null;
+            try {
+                const botResponse = await fetch(`${CONFIG.apiUrl}/api/admin/bots/${widgetState.botId}`);
+                const bot = await botResponse.json();
+                if (bot && bot.client_id) {
+                    clientId = bot.client_id;
+                }
+            } catch (error) {
+                console.error('Error fetching bot info for client_id:', error);
+            }
+            
             const conversationData = {
                 conversation_id: widgetState.sessionId,
                 bot_id: widgetState.botId,
-                client_id: null, // Will be set from bot info
+                client_id: clientId,
                 channel_type: 'chat',
                 user_details: widgetState.userDetails,
                 message_log: widgetState.messages.map(msg => ({
@@ -558,13 +586,21 @@
                 status: 'completed'
             };
             
-            await fetch(`${CONFIG.apiUrl}/api/conversations/save`, {
+            console.log('Saving conversation:', conversationData);
+            
+            const response = await fetch(`${CONFIG.apiUrl}/api/conversations/save`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(conversationData)
             });
+            
+            if (response.ok) {
+                console.log('Conversation saved successfully');
+            } else {
+                console.error('Failed to save conversation:', response.status);
+            }
             
         } catch (error) {
             console.error('Error saving conversation:', error);

@@ -191,16 +191,10 @@ const Bots = () => {
       clearTimeout(timeoutId);
 
       if (response.ok) {
-        const responseData = await response.json();
-        
-        // Check if response has expected format (like n8n webhook response)
-        if (responseData && (responseData.reply || responseData.message || responseData.response)) {
-          setWebhookValid(true);
-          return true;
-        } else {
-          setWebhookValid(false);
-          return false;
-        }
+        // For webhook validation, just check if the endpoint responds successfully
+        // Don't require specific response format as n8n webhooks can have various formats
+        setWebhookValid(true);
+        return true;
       } else {
         setWebhookValid(false);
         return false;

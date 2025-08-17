@@ -2,6 +2,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useState, useEffect } from "react";
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import AdminLayout from "./AdminLayout";
 
 const Analytics = () => {
   const { user } = useAuth();
@@ -68,42 +69,111 @@ const Analytics = () => {
     }
   };
 
-  // Simple chart rendering (SVG bar chart)
+  // Enhanced chart rendering with better styling
   const renderBarChart = (data, label, color) => {
-    if (!data || data.length === 0) return <div className="text-gray-400">No data</div>;
+    if (!data || data.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-32 text-gray-400">
+          <div className="text-center">
+            <div className="text-4xl mb-2">📊</div>
+            <div>No data available</div>
+          </div>
+        </div>
+      );
+    }
+    
     const max = Math.max(...data.map(d => d.count || d.minutes || 0));
+    const chartHeight = 150;
+    const barWidth = Math.max(20, (400 - (data.length * 10)) / data.length);
+    
     return (
-      <svg width="100%" height="120">
-        {data.map((d, i) => {
-          const val = d.count || d.minutes || 0;
-          return (
-            <g key={i}>
-              <rect
-                x={i * 30 + 10}
-                y={120 - (val / max) * 100}
-                width={20}
-                height={(val / max) * 100}
-                fill={color}
-              />
-              <text x={i * 30 + 20} y={115} fontSize="10" textAnchor="middle" fill="#555">
-                {d._id?.slice(5)}
-              </text>
-              <text x={i * 30 + 20} y={120 - (val / max) * 100 - 5} fontSize="10" textAnchor="middle" fill="#222">
-                {val}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+      <div className="relative">
+        <svg width="100%" height={chartHeight} className="mt-4">
+          {/* Grid lines */}
+          {[0, 25, 50, 75, 100].map((percent, i) => (
+            <line
+              key={i}
+              x1="0"
+              y1={chartHeight - (percent / 100) * (chartHeight - 40)}
+              x2="100%"
+              y2={chartHeight - (percent / 100) * (chartHeight - 40)}
+              stroke="#e5e7eb"
+              strokeWidth="1"
+            />
+          ))}
+          
+          {data.map((d, i) => {
+            const val = d.count || d.minutes || 0;
+            const barHeight = max > 0 ? (val / max) * (chartHeight - 40) : 0;
+            const x = (i * (100 / data.length)) + (100 / data.length / 2);
+            const y = chartHeight - barHeight - 20;
+            
+            return (
+              <g key={i}>
+                {/* Bar */}
+                <rect
+                  x={`${x - barWidth/2}%`}
+                  y={y}
+                  width={`${barWidth}%`}
+                  height={barHeight}
+                  fill={color}
+                  rx="4"
+                  className="transition-all duration-300 hover:opacity-80"
+                />
+                
+                {/* Value on top of bar */}
+                <text 
+                  x={`${x}%`} 
+                  y={y - 8} 
+                  fontSize="12" 
+                  textAnchor="middle" 
+                  fill="#374151"
+                  className="font-semibold"
+                >
+                  {val}
+                </text>
+                
+                {/* Date label */}
+                <text 
+                  x={`${x}%`} 
+                  y={chartHeight - 5} 
+                  fontSize="11" 
+                  textAnchor="middle" 
+                  fill="#6b7280"
+                >
+                  {d._id ? d._id.slice(5) : `Day ${i+1}`}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+        
+        {/* Chart title and total */}
+        <div className="mt-4 text-center">
+          <div className="text-sm text-gray-600 mb-1">{label}</div>
+          <div className="text-2xl font-bold text-gray-800">
+            {data.reduce((sum, d) => sum + (d.count || d.minutes || 0), 0)}
+          </div>
+        </div>
+      </div>
     );
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen text-xl">Loading analytics...</div>;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-screen text-xl">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <div>Loading analytics...</div>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <AdminLayout>
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -114,76 +184,100 @@ const Analytics = () => {
 
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <div className="text-2xl font-bold text-blue-600 mb-2">{kpis.totalClients}</div>
-            <div className="text-gray-700">Total Clients</div>
+          <div className="bg-white rounded-lg shadow-lg p-6 text-center border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+            <div className="text-4xl mb-2">👥</div>
+            <div className="text-3xl font-bold text-blue-600 mb-2">{kpis.totalClients}</div>
+            <div className="text-gray-700 font-medium">Total Clients</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <div className="text-2xl font-bold text-green-600 mb-2">{kpis.totalUsers}</div>
-            <div className="text-gray-700">Total Users</div>
+          <div className="bg-white rounded-lg shadow-lg p-6 text-center border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+            <div className="text-4xl mb-2">👤</div>
+            <div className="text-3xl font-bold text-green-600 mb-2">{kpis.totalUsers}</div>
+            <div className="text-gray-700 font-medium">Total Users</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <div className="text-2xl font-bold text-purple-600 mb-2">{kpis.activeAvatars}</div>
-            <div className="text-gray-700">Active Avatars</div>
+          <div className="bg-white rounded-lg shadow-lg p-6 text-center border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+            <div className="text-4xl mb-2">🤖</div>
+            <div className="text-3xl font-bold text-purple-600 mb-2">{kpis.activeAvatars}</div>
+            <div className="text-gray-700 font-medium">Active Avatars</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6 text-center">
-            <div className="text-2xl font-bold text-red-600 mb-2">{kpis.totalConversations}</div>
-            <div className="text-gray-700">Total Conversations</div>
+          <div className="bg-white rounded-lg shadow-lg p-6 text-center border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+            <div className="text-4xl mb-2">💬</div>
+            <div className="text-3xl font-bold text-red-600 mb-2">{kpis.totalConversations}</div>
+            <div className="text-gray-700 font-medium">Total Conversations</div>
           </div>
         </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-2">Conversations Over Time</h2>
-            {renderBarChart(convoOverTime, 'Conversations', '#2563eb')}
+          <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-800">📈 Conversations Over Time</h2>
+              <div className="text-sm text-gray-500">Last 7 days</div>
+            </div>
+            {renderBarChart(convoOverTime, 'Total Conversations', '#2563eb')}
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-2">Voice Minutes Over Time</h2>
-            {renderBarChart(voiceMinutesOverTime, 'Voice Minutes', '#059669')}
+          <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-800">🎤 Voice Minutes Over Time</h2>
+              <div className="text-sm text-gray-500">Last 7 days</div>
+            </div>
+            {renderBarChart(voiceMinutesOverTime, 'Total Minutes', '#059669')}
           </div>
         </div>
 
         {/* Top Avatars & Fallback Rate */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Top Avatars</h2>
-            <ul className="space-y-2">
+          <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">🤖 Top Avatars</h2>
+            </div>
+            <ul className="space-y-3">
               {topAvatars.length === 0 ? (
-                <li className="text-gray-400">No data</li>
+                <li className="text-center py-8 text-gray-400">
+                  <div className="text-4xl mb-2">🤖</div>
+                  <div>No avatar data available</div>
+                </li>
               ) : (
                 topAvatars.map((a, i) => (
-                  <li key={i} className="flex justify-between items-center">
-                    <span>{a.avatar}</span>
-                    <span className="font-bold text-blue-700">{a.count}</span>
+                  <li key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="font-medium text-gray-700">{a.avatar}</span>
+                    <span className="font-bold text-blue-600 bg-blue-100 px-3 py-1 rounded-full text-sm">
+                      {a.count} sessions
+                    </span>
                   </li>
                 ))
               )}
             </ul>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">Fallback Rate</h2>
-            <div className="text-3xl font-bold text-red-600 mb-2">{fallbackRate.rate.toFixed(2)}%</div>
-            <div className="text-gray-700 mb-2">{fallbackRate.fallback} fallbacks out of {fallbackRate.total} text sessions</div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-red-500 h-3 rounded-full"
-                style={{ width: `${fallbackRate.rate}%` }}
-              ></div>
+          <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
+            <div className="flex items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-800">⚠️ Fallback Rate</h2>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-red-600 mb-2">{fallbackRate.rate.toFixed(2)}%</div>
+              <div className="text-gray-600 mb-4">{fallbackRate.fallback} fallbacks out of {fallbackRate.total} text sessions</div>
+              <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+                <div
+                  className="bg-red-500 h-4 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(fallbackRate.rate, 100)}%` }}
+                ></div>
+              </div>
+              <div className="text-xs text-gray-500">
+                {fallbackRate.rate > 10 ? 'High fallback rate detected' : 'Normal fallback rate'}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Clients Table */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="flex justify-between items-center px-6 py-4 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Clients Usage</h2>
+        <div className="bg-white rounded-lg shadow-lg mb-8 border border-gray-100">
+          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">📊 Clients Usage Analytics</h2>
             <button
               onClick={() => handleExport('client')}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
               disabled={exporting}
             >
-              Export CSV
+              {exporting ? 'Exporting...' : '📥 Export CSV'}
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -219,15 +313,15 @@ const Analytics = () => {
         </div>
 
         {/* Avatars Table */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="flex justify-between items-center px-6 py-4 border-b">
-            <h2 className="text-xl font-semibold text-gray-900">Avatars Usage</h2>
+        <div className="bg-white rounded-lg shadow-lg mb-8 border border-gray-100">
+          <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">🤖 Avatars Usage Analytics</h2>
             <button
               onClick={() => handleExport('avatar')}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
               disabled={exporting}
             >
-              Export CSV
+              {exporting ? 'Exporting...' : '📥 Export CSV'}
             </button>
           </div>
           <div className="overflow-x-auto">
@@ -260,7 +354,7 @@ const Analytics = () => {
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

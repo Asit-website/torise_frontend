@@ -63,7 +63,7 @@ const CONFIG = {
     width: '350px',              // Widget width
     height: '500px',             // Widget height
     zIndex: 9999,                // Z-index for layering
-    apiUrl: 'https://torise-backend-1.onrender.com',  // Your API URL
+    apiUrl: 'http://109.73.166.213:5000',  // Your API URL
     widgetUrl: 'http://localhost:5001' // Your frontend URL
 };
 ```

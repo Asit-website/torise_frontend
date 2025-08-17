@@ -53,7 +53,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/api/admin/bots/lookup/:dnis', async (req, res) => {
   try {
     const { dnis } = req.params;
-    const response = await axios.get(`https://torise-backend-1.onrender.com/api/admin/bots/lookup/${dnis}`);
+    const response = await axios.get(`http://109.73.166.213:5000/api/admin/bots/lookup/${dnis}`);
     res.json(response.data);
   } catch (err) {
     res.status(404).json({ error: 'Bot not found', details: err.message });
@@ -79,7 +79,7 @@ app.get('/api/admin/bots/lookup/:dnis', async (req, res) => {
  */
 app.post('/api/reports/entry', async (req, res) => {
   try {
-    const response = await axios.post('https://torise-backend-1.onrender.com/api/reports/entry', req.body);
+    const response = await axios.post('http://109.73.166.213:5000/api/reports/entry', req.body);
     res.json(response.data);
   } catch (err) {
     res.status(400).json({ error: 'Failed to create report entry', details: err.message });

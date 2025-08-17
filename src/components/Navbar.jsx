@@ -74,7 +74,7 @@ const Navbar = () => {
                   variant="text"
                   size="sm"
                   className="hidden lg:inline-block"
-                  onClick={() => navigate('/profile')}
+                  onClick={() => navigate('/my-profile')}
                 >
                   <UserCircle className="h-4 w-4 mr-1" />
                   Profile
@@ -99,14 +99,14 @@ const Navbar = () => {
                 >
                   Sign In
                 </Button>
-                <Button
+                {/* <Button
                   variant="filled"
                   size="sm"
                   className="hidden lg:inline-block"
                   onClick={() => navigate('/register')}
                 >
                   Sign Up
-                </Button>
+                </Button> */}
               </>
             )}
           </div>
@@ -127,11 +127,11 @@ const Navbar = () => {
       <Collapse open={openNav}>
         <div className="container mx-auto">
           <ul className="mt-2 mb-4 flex flex-col gap-2 lg:mb-0 lg:mt-0 lg:flex-row lg:items-center lg:gap-6">
-            <Typography as="li" variant="small" color="blue-gray" className="flex items-center gap-x-2 p-1 font-medium">
+            {/* <Typography as="li" variant="small" color="blue-gray" className="flex items-center gap-x-2 p-1 font-medium">
               <Link to="/" className="flex items-center hover:text-blue-500 transition-colors">
                 Home
               </Link>
-            </Typography>
+            </Typography> */}
             {user && (
               <>
                 <Typography as="li" variant="small" color="blue-gray" className="flex items-center gap-x-2 p-1 font-medium">
@@ -158,7 +158,7 @@ const Navbar = () => {
                   variant="text"
                   size="sm"
                   onClick={() => {
-                    navigate('/profile')
+                    navigate('/my-profile')
                     setOpenNav(false)
                   }}
                 >
@@ -188,7 +188,7 @@ const Navbar = () => {
                 >
                   Sign In
                 </Button>
-                <Button
+                {/* <Button
                   fullWidth
                   variant="filled"
                   size="sm"
@@ -198,7 +198,7 @@ const Navbar = () => {
                   }}
                 >
                   Sign Up
-                </Button>
+                </Button> */}
               </>
             )}
           </div>

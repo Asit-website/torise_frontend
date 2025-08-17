@@ -95,6 +95,7 @@ const Dashboard = () => {
     }
     if (isClient && user?.client_id) {
       fetchClientBots();
+      fetchClientConversations();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, searchTerm, isClient, user]);
@@ -173,6 +174,38 @@ const Dashboard = () => {
       toast.error('Failed to fetch bots');
     } finally {
       setClientBotsLoading(false);
+    }
+  };
+
+  const fetchClientConversations = async () => {
+    try {
+      console.log('Fetching client conversations for user:', user);
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      if (user.client_id) {
+        params.append('clientId', user.client_id);
+      }
+      if (user.application_sid && user.application_sid.length > 0) {
+        // Send application_sid as array
+        user.application_sid.forEach(sid => {
+          params.append('application_sid', sid);
+        });
+      }
+      
+      console.log('Fetching conversations with params:', params.toString());
+      const response = await fetch(`/api/conversations?${params.toString()}`);
+      const data = await response.json();
+      
+      console.log('Client conversations API response:', data);
+      
+      if (data.conversations) {
+        console.log('Fetched client conversations:', data.conversations.length);
+        // You can store this data in state if needed for dashboard display
+        // setClientConversations(data.conversations);
+      }
+    } catch (error) {
+      console.error('Error fetching client conversations:', error);
     }
   };
 

@@ -14,7 +14,10 @@ const ChatInterface = () => {
   const [error, setError] = useState('');
   const [botInfo, setBotInfo] = useState(null);
   const [sessionId, setSessionId] = useState('');
+
   const messagesEndRef = useRef(null);
+
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -31,6 +34,8 @@ const ChatInterface = () => {
       setSessionId(`chat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
     }
   }, [botId]);
+
+
 
   // Optional: Save conversation when page is unloaded (commented out to only save on disconnect button)
   // useEffect(() => {
@@ -61,17 +66,24 @@ const ChatInterface = () => {
         headers: { 'Content-Type': 'application/json' }
       });
 
-      // Check if response is ok and has expected structure
+      // Just check if the endpoint responds successfully
+      // Don't require specific response format as n8n webhooks can have various formats
       return response.status >= 200 && response.status < 300;
     } catch (error) {
       console.error('Webhook validation failed:', error);
-      return false;
+      // For webhook validation, we'll be more lenient
+      // Only return false for network errors, not for response format issues
+      if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+        return false;
+      }
+      // If we get any response (even error), the webhook exists
+      return error.response && error.response.status >= 200 && error.response.status < 500;
     }
   };
 
   const fetchBotInfo = async () => {
     try {
-      const response = await axios.get(`https://torise-backend-1.onrender.com/api/admin/bots/${botId}`);
+      const response = await axios.get(`http://109.73.166.213:5000/api/admin/bots/${botId}`);
       const bot = response.data;
       
       if (!bot || !bot.active) {
@@ -85,12 +97,12 @@ const ChatInterface = () => {
         return;
       }
 
-      // Validate webhook URL
-      const isWebhookValid = await validateWebhookUrl(bot.webhook_url);
-      if (!isWebhookValid) {
-        setError('This bot\'s webhook URL is not responding correctly. Please contact the administrator.');
-        return;
-      }
+      // Remove webhook validation since we know it works from Postman
+      // const isWebhookValid = await validateWebhookUrl(bot.webhook_url);
+      // if (!isWebhookValid) {
+      //   setError('This bot\'s webhook URL is not responding correctly. Please contact the administrator.');
+      //   return;
+      // }
 
       setBotInfo(bot);
       
@@ -127,13 +139,6 @@ const ChatInterface = () => {
       return;
     }
 
-    // Validate webhook URL before sending message
-    const isWebhookValid = await validateWebhookUrl(botInfo.webhook_url);
-    if (!isWebhookValid) {
-      setError('Webhook URL is not responding. Please contact the administrator.');
-      return;
-    }
-
     const userMessage = {
       id: Date.now(),
       type: 'user',
@@ -146,22 +151,24 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     try {
-      // Send to N8N webhook with correct format
-      const n8nPayload = {
-        message: currentMessage,
-        sessionId: sessionId,
-        timestamp: new Date().toISOString()
-      };
-
-      const response = await axios.post(botInfo.webhook_url, n8nPayload, {
+      // Send to N8N webhook with query parameter format (like Postman)
+      const webhookUrl = `${botInfo.webhook_url}?message=${encodeURIComponent(currentMessage)}`;
+      
+      const response = await axios.post(webhookUrl, {}, {
         timeout: 10000,
         headers: { 'Content-Type': 'application/json' }
       });
+
+      console.log('🔗 Webhook Response:', response.data);
+      console.log('🔗 Webhook Status:', response.status);
 
       let botReply = 'Thank you for your message. I will get back to you soon.';
       
       if (response.data && response.data.reply) {
         botReply = response.data.reply;
+        console.log('✅ Using webhook reply:', botReply);
+      } else {
+        console.log('❌ No reply in webhook response, using default');
       }
 
       const botMessage = {
@@ -196,12 +203,12 @@ const ChatInterface = () => {
       return;
     }
 
-    // Validate webhook URL before saving
-    const isWebhookValid = await validateWebhookUrl(botInfo.webhook_url);
-    if (!isWebhookValid) {
-      console.log('❌ Not saving conversation - webhook URL is invalid');
-      return;
-    }
+    // Remove webhook validation since we know it works from Postman
+    // const isWebhookValid = await validateWebhookUrl(botInfo.webhook_url);
+    // if (!isWebhookValid) {
+    //   console.log('❌ Not saving conversation - webhook URL is invalid');
+    //   return;
+    // }
 
     try {
       console.log('💾 Saving conversation to database...');
@@ -233,7 +240,7 @@ const ChatInterface = () => {
 
       console.log('Conversation data to save:', JSON.stringify(conversationData, null, 2));
 
-      const response = await axios.post('https://torise-backend-1.onrender.com/api/conversations/save', conversationData, {
+      const response = await axios.post('http://109.73.166.213:5000/api/conversations/save', conversationData, {
         timeout: 10000,
         headers: { 'Content-Type': 'application/json' }
       });

@@ -535,17 +535,47 @@ const ConversationLogs = () => {
   
                     {/* Tab content */}
                     {activeTab === "Overview" && (
-                      <div className="text-sm text-gray-700 space-y-2 p-4 bg-gray-50 rounded shadow">
-                        <p>Conversation summary and metadata will be shown here.</p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Call status: <span className="text-green-600 font-medium">{metadata.status}</span>
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Channel Type: <span className="text-blue-600 font-medium">{metadata.channelType}</span>
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Application SID: <span className="text-purple-600 font-medium">{metadata.applicationSid}</span>
-                        </p>
+                      <div className="text-sm text-gray-700 space-y-4 p-4 bg-gray-50 rounded shadow">
+                        {/* AI Summary Section */}
+                        {selectedConversation?.summary && (
+                          <div className="bg-white p-4 rounded-lg border border-gray-200">
+                            <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                              🤖 AI Conversation Summary
+                            </h4>
+                            <div className="bg-blue-50 p-3 rounded border-l-4 border-blue-400">
+                              <p className="text-gray-700 leading-relaxed">
+                                {selectedConversation.summary}
+                              </p>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Generated using OpenAI GPT-3.5
+                            </p>
+                          </div>
+                        )}
+                        
+                        {/* Metadata Section */}
+                        <div className="bg-white p-4 rounded-lg border border-gray-200">
+                          <h4 className="font-semibold text-gray-800 mb-2">📊 Conversation Details</h4>
+                          <div className="space-y-2">
+                            <p className="text-xs text-gray-500">
+                              Call status: <span className="text-green-600 font-medium">{metadata.status}</span>
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Channel Type: <span className="text-blue-600 font-medium">{metadata.channelType}</span>
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Application SID: <span className="text-purple-600 font-medium">{metadata.applicationSid}</span>
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Messages: <span className="text-orange-600 font-medium">{selectedConversation?.message_log?.length || 0}</span>
+                            </p>
+                            {selectedConversation?.summary && (
+                              <p className="text-xs text-gray-500">
+                                Summary: <span className="text-green-600 font-medium">Available</span>
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     )}
   
@@ -597,13 +627,21 @@ const ConversationLogs = () => {
                   {/* Right metadata panel */}
                   <div className="w-64 flex-shrink-0 bg-gray-50 rounded p-4 shadow-inner overflow-y-auto h-full">
                     <h4 className="text-sm font-semibold mb-3">Metadata</h4>
-                                      <ul className="text-sm text-gray-700 space-y-2">
-                    <li><strong>Date:</strong> {metadata.date}</li>
-                    <li><strong>Connection duration:</strong> {metadata.duration} Sec</li>
-                    <li><strong>Call status:</strong> <span className="text-green-600 font-medium">{metadata.status}</span></li>
-                    <li><strong>Channel Type:</strong> <span className="text-blue-600 font-medium">{metadata.channelType}</span></li>
-                    <li><strong>Application SID:</strong> <span className="text-purple-600 font-medium">{metadata.applicationSid}</span></li>
-                  </ul>
+                    <ul className="text-sm text-gray-700 space-y-2">
+                      <li><strong>Date:</strong> {metadata.date}</li>
+                      <li><strong>Connection duration:</strong> {metadata.duration} Sec</li>
+                      <li><strong>Call status:</strong> <span className="text-green-600 font-medium">{metadata.status}</span></li>
+                      <li><strong>Channel Type:</strong> <span className="text-blue-600 font-medium">{metadata.channelType}</span></li>
+                      <li><strong>Application SID:</strong> <span className="text-purple-600 font-medium">{metadata.applicationSid}</span></li>
+                      <li><strong>Messages:</strong> <span className="text-orange-600 font-medium">{selectedConversation?.message_log?.length || 0}</span></li>
+                      <li><strong>AI Summary:</strong> 
+                        {selectedConversation?.summary ? (
+                          <span className="text-green-600 font-medium">Available</span>
+                        ) : (
+                          <span className="text-gray-500 font-medium">Not Available</span>
+                        )}
+                      </li>
+                    </ul>
                   </div>
                 </div>
               </div>

@@ -76,7 +76,7 @@ const TopNavbar = ({ user }) => {
       <div className="font-bold text-xl">GenAI Dashboard</div>
       <div className="space-x-4">
         <Link to="/dashboard" className="hover:underline">Dashboard</Link>
-        <Link to="/profile" className="hover:underline">Profile</Link>
+        <Link to="/my-profile" className="hover:underline">Profile</Link>
       </div>
     </nav>
   );

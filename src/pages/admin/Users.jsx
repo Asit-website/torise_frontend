@@ -124,9 +124,20 @@ const Users2 = () => {
   // When client is selected, auto-assign application_sid
   const handleClientChange = (e) => {
     const clientId = e.target.value;
+    console.log('Client selected:', clientId);
+    
     setFormData(prev => ({ ...prev, client_id: clientId }));
     const selected = clients.find(c => c._id === clientId);
-    setFormData(prev => ({ ...prev, application_sid: selected?.application_sid || [] }));
+    console.log('Selected client:', selected);
+    console.log('Client application_sid:', selected?.application_sid);
+    
+    const newApplicationSid = selected?.application_sid || [];
+    setFormData(prev => ({ 
+      ...prev, 
+      application_sid: newApplicationSid 
+    }));
+    
+    console.log('Updated formData with application_sid:', newApplicationSid);
   };
 
   const handleCreateUser = async (e) => {
@@ -135,9 +146,17 @@ const Users2 = () => {
       toast.error('Password is required and must be at least 6 characters.');
       return;
     }
+    
+    console.log('Creating user with formData:', formData);
+    console.log('Application SID being sent:', formData.application_sid);
+    
     try {
       const payload = { ...formData };
+      console.log('Payload being sent to backend:', payload);
+      
       const response = await api.post('/api/users', payload);
+      console.log('Backend response:', response.data);
+      
       toast.success('User created successfully');
       setShowCreateModal(false);
       setFormData({
@@ -153,6 +172,7 @@ const Users2 = () => {
       fetchUsers();
     } catch (error) {
       console.error('Error creating user:', error);
+      console.error('Error response:', error.response?.data);
       toast.error(error.response?.data?.message || 'Failed to create user');
     }
   };
@@ -333,7 +353,7 @@ const Users2 = () => {
                             </td>
                             <td className="border border-gray-300 p-3">
                               <span className="text-gray-700">
-                                {u?.createdAt ? new Date(u?.createdAt).toLocaleDateString() : 'N/A'}
+                                {u?.created_at ? new Date(u?.created_at).toLocaleDateString() : 'N/A'}
                               </span>
                             </td>
                             <td className="border border-gray-300 p-3">
