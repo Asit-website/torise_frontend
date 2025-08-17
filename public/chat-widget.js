@@ -7,7 +7,7 @@
         width: '350px',
         height: '500px',
         zIndex: 9999,
-        apiUrl: 'http://109.73.166.213:5000', // Change this to your API URL
+        apiUrl: 'https://torise-backend-1.onrender.com', // Change this to your API URL
         widgetUrl: 'http://localhost:5001' // Change this to your frontend URL
     };
     

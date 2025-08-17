@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://109.73.166.213:5000', // Back to main server
+  baseURL: 'https://torise-backend-1.onrender.com', // Back to main server
   headers: {
     'Content-Type': 'application/json',
   },

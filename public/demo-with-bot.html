@@ -196,7 +196,7 @@
             <h3>🤖 Bot Configuration</h3>
             <p><strong>Bot ID:</strong> <span class="bot-id">687fd45b998676bde66dd2e9</span></p>
             <p><strong>Status:</strong> <span id="bot-status">Checking...</span></p>
-            <p><strong>API URL:</strong> http://109.73.166.213:5000</p>
+            <p><strong>API URL:</strong> https://torise-backend-1.onrender.com</p>
         </div>
         
         <div class="content-grid">
@@ -288,7 +288,7 @@
         // Check bot status
         async function checkBotStatus() {
             try {
-                const response = await fetch(`http://109.73.166.213:5000/api/admin/bots/${botId}`);
+                const response = await fetch(`https://torise-backend-1.onrender.com/api/admin/bots/${botId}`);
                 if (response.ok) {
                     const bot = await response.json();
                     document.getElementById('bot-status').textContent = `✅ Active - ${bot.name}`;

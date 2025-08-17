@@ -83,7 +83,7 @@ const ChatInterface = () => {
 
   const fetchBotInfo = async () => {
     try {
-      const response = await axios.get(`http://109.73.166.213:5000/api/admin/bots/${botId}`);
+      const response = await axios.get(`https://torise-backend-1.onrender.com/api/admin/bots/${botId}`);
       const bot = response.data;
       
       if (!bot || !bot.active) {
@@ -240,7 +240,7 @@ const ChatInterface = () => {
 
       console.log('Conversation data to save:', JSON.stringify(conversationData, null, 2));
 
-      const response = await axios.post('http://109.73.166.213:5000/api/conversations/save', conversationData, {
+      const response = await axios.post('https://torise-backend-1.onrender.com/api/conversations/save', conversationData, {
         timeout: 10000,
         headers: { 'Content-Type': 'application/json' }
       });
