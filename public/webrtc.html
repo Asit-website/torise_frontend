@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>WebRTC SIP Client - PCMU/PCMA Codecs</title>
+	<link rel="stylesheet" href="styles.css" />
+	<!-- Local SIP.js Library -->
+	<script src="vendor/sip.min.js"></script>
+	<script src="app.js" defer></script>
+</head>
+
+<body>
+	<div class="card">
+		<h1>WebRTC Call - PCMU/PCMA</h1>
+		<div class="status" id="status">Initializing…</div>
+		<div class="actions">
+			<button id="callBtn" class="primary">Call 01724866602</button>
+			<button id="hangupBtn" class="danger" disabled>Hang Up</button>
+		</div>
+		<div class="small">PCMU/PCMA codecs - Standard telephony compatibility</div>
+		<audio id="remoteAudio" autoplay playsinline controls
+			style="width: 100%; margin-top: 10px; background: rgba(255,255,255,0.1); border-radius: 5px;"></audio>
+		<div style="font-size: 11px; color: #94a3b8; margin-top: 5px; text-align: center;">
+			🔊 PCMU/PCMA codecs for SIP telephony compatibility
+		</div>
+	</div>
+</body>
+
+</html>
