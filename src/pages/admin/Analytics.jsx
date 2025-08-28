@@ -26,6 +26,7 @@ const Analytics = () => {
     activeAvatars: 0,
   });
   const [clientsTable, setClientsTable] = useState([]);
+  
   const [avatarsTable, setAvatarsTable] = useState([]);
   const [topAvatars, setTopAvatars] = useState([]);
   const [fallbackRate, setFallbackRate] = useState({ total: 0, fallback: 0, rate: 0 });

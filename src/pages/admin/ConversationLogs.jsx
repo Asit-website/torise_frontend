@@ -18,6 +18,7 @@ const ConversationLogs = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const transcriptionRef = useRef();
+  
 
   useEffect(() => {
     const fetchData = async () => {
