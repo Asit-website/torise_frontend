@@ -1,5 +1,5 @@
 import { useAuth } from "../../contexts/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import AdminLayout from "./AdminLayout";
@@ -32,6 +32,10 @@ const Analytics = () => {
   const [fallbackRate, setFallbackRate] = useState({ total: 0, fallback: 0, rate: 0 });
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+
+  // Chart refs for PNG export
+  const chatChartRef = useRef(null);
+  const voiceChartRef = useRef(null);
 
   // Dynamic graph states
   const [usageRange, setUsageRange] = useState('7');
@@ -91,64 +95,64 @@ const Analytics = () => {
       console.log('Current user:', user);
       console.log('User role:', user?.role);
       
-      // Fetch both voice and chat data separately
-      const [voiceResponse, chatResponse] = await Promise.all([
-        api.get('/api/analytics/voice-minutes-over-time', { params: { days } }),
-        api.get('/api/analytics/conversations-over-time', { params: { days, channel: 'chat' } })
+      // Fetch chat data
+      const [chatSessionsResponse, chatMinutesResponse] = await Promise.all([
+        api.get('/api/analytics/conversations-over-time', { params: { days, channel: 'chat' } }),
+        api.get('/api/analytics/chat-minutes-over-time', { params: { days } })
       ]);
       
-      console.log('✅ Voice minutes response:', voiceResponse.data);
-      console.log('✅ Chat sessions response:', chatResponse.data);
+      console.log('✅ Chat sessions response:', chatSessionsResponse.data);
+      console.log('✅ Chat minutes response:', chatMinutesResponse.data);
       
-      // Process data to get total minutes and session counts by date
+      // Process data to get chat minutes and session counts by date
       const processedData = {
         labels: [],
-        minutes: [], // Total voice minutes
-        text: []     // Chat session counts
+        chatMinutes: [], // Chat minutes
+        chatSessions: [] // Chat session counts
       };
       
-      // Create maps for both datasets
-      const voiceMap = new Map();
-      const chatMap = new Map();
-      
-      // Process voice minutes data
-      voiceResponse.data.forEach(item => {
-        const date = item._id;
-        const minutes = parseFloat(item.minutes) || 0;
-        console.log(`Date: ${date}, Voice Minutes: ${minutes}`);
-        voiceMap.set(date, minutes);
-      });
+      // Create maps for datasets
+      const chatSessionsMap = new Map();
+      const chatMinutesMap = new Map();
       
       // Process chat sessions data
-      chatResponse.data.forEach(item => {
+      chatSessionsResponse.data.forEach(item => {
         const date = item._id;
         const count = parseInt(item.count) || 0;
         console.log(`Date: ${date}, Chat Sessions: ${count}`);
-        chatMap.set(date, count);
+        chatSessionsMap.set(date, count);
+      });
+      
+      // Process chat minutes data
+      chatMinutesResponse.data.forEach(item => {
+        const date = item._id;
+        const minutes = parseFloat(item.minutes) || 0;
+        console.log(`Date: ${date}, Chat Minutes: ${minutes}`);
+        chatMinutesMap.set(date, minutes);
       });
       
       // Get all unique dates
-      const allDates = new Set([...voiceMap.keys(), ...chatMap.keys()]);
+      const allDates = new Set([...chatMinutesMap.keys()]);
       const sortedDates = Array.from(allDates).sort();
       
       processedData.labels = sortedDates.map(date => {
         const d = new Date(date);
         return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       });
-      processedData.minutes = sortedDates.map(date => {
-        const value = voiceMap.get(date) || 0;
-        console.log(`Final mapping - Date: ${date}, Voice Minutes: ${value}`);
+      processedData.chatMinutes = sortedDates.map(date => {
+        const value = chatMinutesMap.get(date) || 0;
+        console.log(`Final mapping - Date: ${date}, Chat Minutes: ${value}`);
         return value;
       });
-      processedData.text = sortedDates.map(date => {
-        const value = chatMap.get(date) || 0;
+      processedData.chatSessions = sortedDates.map(date => {
+        const value = chatSessionsMap.get(date) || 0;
         console.log(`Final mapping - Date: ${date}, Chat Sessions: ${value}`);
         return value;
       });
       
       console.log('✅ Processed usage data:', processedData);
-      console.log('✅ Voice map:', Object.fromEntries(voiceMap));
-      console.log('✅ Chat map:', Object.fromEntries(chatMap));
+      console.log('✅ Chat minutes map:', Object.fromEntries(chatMinutesMap));
+      console.log('✅ Chat sessions map:', Object.fromEntries(chatSessionsMap));
       console.log('✅ Sorted dates:', sortedDates);
       
       setUsageData(prev => ({
@@ -244,6 +248,24 @@ const Analytics = () => {
     }
   };
 
+  // Function to export chart as PNG
+  const exportChartAsPNG = (chartRef, filename) => {
+    if (chartRef && chartRef.current) {
+      const canvas = chartRef.current.canvas;
+      if (canvas) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        toast.success('Chart exported successfully!');
+      } else {
+        toast.error('Chart not available for export');
+      }
+    } else {
+      toast.error('Chart reference not found');
+    }
+  };
+
   const handleExport = async (scope) => {
     setExporting(true);
     try {
@@ -311,9 +333,16 @@ const Analytics = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Usage Analytics Chart */}
           <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">📊 Usage Analytics (Minutes/Text Sessions)</h2>
-              <div className="flex gap-2">
+                         <div className="flex items-center justify-between mb-4">
+               <h2 className="text-xl font-bold text-gray-800">📊 Chat Analytics</h2>
+               <div className="flex gap-2">
+                 <button
+                   onClick={() => exportChartAsPNG(chatChartRef, `chat-analytics-${usageRange}days.png`)}
+                   className="px-3 py-1 rounded-md text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                   title="Export as PNG"
+                 >
+                   📷 Export
+                 </button>
                 {['7', '30'].map((range) => (
                   <button
                     key={range}
@@ -344,14 +373,15 @@ const Analytics = () => {
             ) : usageData[usageRange]?.labels?.length > 0 ? (
               <div className="h-64">
                 <Line
+                  ref={chatChartRef}
                   data={{
                     labels: usageData[usageRange].labels,
                     datasets: [
                       {
-                        label: 'Total Voice Minutes',
-                        data: usageData[usageRange].minutes,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37,99,235,0.1)',
+                        label: 'Chat Minutes',
+                        data: usageData[usageRange].chatMinutes,
+                        borderColor: '#f59e42',
+                        backgroundColor: 'rgba(245,158,66,0.1)',
                         tension: 0.4,
                         fill: false,
                         borderWidth: 2,
@@ -359,10 +389,10 @@ const Analytics = () => {
                         pointHoverRadius: 6,
                       },
                       {
-                        label: 'Text Sessions',
-                        data: usageData[usageRange].text,
-                        borderColor: '#dc2626',
-                        backgroundColor: 'rgba(220,38,38,0.1)',
+                        label: 'Chat Sessions',
+                        data: usageData[usageRange].chatSessions,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16,185,129,0.1)',
                         tension: 0.4,
                         fill: false,
                         borderWidth: 2,
@@ -459,9 +489,16 @@ const Analytics = () => {
 
           {/* Voice Analytics Chart */}
           <div className="bg-white rounded-lg shadow-lg p-6 border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800">🎤 Voice Analytics (Total Minutes/Calls)</h2>
-              <div className="flex gap-2">
+                         <div className="flex items-center justify-between mb-4">
+               <h2 className="text-xl font-bold text-gray-800">🎤 Voice Analytics (Total Minutes/Calls)</h2>
+               <div className="flex gap-2">
+                 <button
+                   onClick={() => exportChartAsPNG(voiceChartRef, `voice-analytics-${voiceRange}days.png`)}
+                   className="px-3 py-1 rounded-md text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+                   title="Export as PNG"
+                 >
+                   📷 Export
+                 </button>
                 {['7', '30'].map((range) => (
                   <button
                     key={range}
@@ -492,6 +529,7 @@ const Analytics = () => {
             ) : voiceData[voiceRange]?.labels?.length > 0 ? (
               <div className="h-64">
                 <Line
+                  ref={voiceChartRef}
                   data={{
                     labels: voiceData[voiceRange].labels,
                     datasets: [

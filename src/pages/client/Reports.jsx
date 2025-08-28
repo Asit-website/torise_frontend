@@ -39,10 +39,13 @@ const Reports = () => {
           try {
             // Build query parameters
             const params = new URLSearchParams();
+            
+            // Send both client_id and application_sid for mixed filtering
             if (user.client_id) {
               params.append('clientId', user.client_id);
               console.log('Added clientId to params:', user.client_id);
             }
+            
             if (user.application_sid && user.application_sid.length > 0) {
               // Send application_sid as array
               user.application_sid.forEach((sid, index) => {
@@ -53,30 +56,32 @@ const Reports = () => {
               console.log('No application_sid found in user object');
             }
             
-            // Temporary fix: Add the chat conversations application_sid as well
-            // This ensures we get both user's application_sid and chat conversations
-            params.append('application_sid', '687fd45b998676bde66dd2e9');
-            console.log('Added temporary application_sid for chat conversations: 687fd45b998676bde66dd2e9');
-            
-            // Remove channel_type filter to get both voice and chat conversations
-            // params.append('channel_type', 'chat');
-            console.log('Removed channel_type filter to get all conversation types');
+            console.log('Using mixed filtering: chat by client_id, voice by application_sid');
             
             console.log('Final params string:', params.toString());
-            console.log('Making API call to:', `/api/conversations?${params.toString()}`);
+            console.log('Making API call to:', `/api/client/reports?${params.toString()}`);
             
-            const response = await fetch(`/api/conversations?${params.toString()}`);
+            // Get the token from localStorage
+            const token = localStorage.getItem('token');
+            console.log('Token available:', !!token);
+            
+            const response = await fetch(`/api/client/reports?${params.toString()}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
             const data = await response.json();
             
             console.log('API response status:', response.status);
             console.log('API response data:', data);
             
-            if (data.conversations) {
-              allConversations = data.conversations;
+            if (data.logs) {
+              allConversations = data.logs;
               console.log('Fetched conversations count:', allConversations.length);
               console.log('First few conversations:', allConversations.slice(0, 3));
             } else {
-              console.log('No conversations array in response');
+              console.log('No logs array in response');
             }
           } catch (err) {
             console.error('Error fetching conversations:', err);
