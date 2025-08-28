@@ -155,6 +155,7 @@ const Reports = () => {
       setCurrentPage(1);
     }
   };
+  
 
   const handleItemsPerPageChange = (newItemsPerPage) => {
     setItemsPerPage(newItemsPerPage);
