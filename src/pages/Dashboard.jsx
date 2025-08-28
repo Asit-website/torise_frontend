@@ -36,22 +36,17 @@ const Dashboard = () => {
   const [avatarsLoading, setAvatarsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [usageRange, setUsageRange] = useState('7');
-  const usageData = {
-    '7': {
-      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      minutes: [120, 150, 170, 140, 180, 200, 220],
-      text: [300, 320, 310, 400, 420, 410, 430],
-    },
-    '30': {
-      labels: [
-        'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7', 'Day 8', 'Day 9', 'Day 10',
-        'Day 11', 'Day 12', 'Day 13', 'Day 14', 'Day 15', 'Day 16', 'Day 17', 'Day 18', 'Day 19', 'Day 20',
-        'Day 21', 'Day 22', 'Day 23', 'Day 24', 'Day 25', 'Day 26', 'Day 27', 'Day 28', 'Day 29', 'Day 30',
-      ],
-      minutes: [120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410],
-      text: [300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590],
-    },
-  };
+  const [usageData, setUsageData] = useState({
+    '7': { labels: [], minutes: [], text: [] },
+    '30': { labels: [], minutes: [], text: [] }
+  });
+  const [usageDataLoading, setUsageDataLoading] = useState(false);
+  const [voiceRange, setVoiceRange] = useState('7');
+  const [voiceData, setVoiceData] = useState({
+    '7': { labels: [], minutes: [], calls: [] },
+    '30': { labels: [], minutes: [], calls: [] }
+  });
+  const [voiceDataLoading, setVoiceDataLoading] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [addUserForm, setAddUserForm] = useState({
@@ -92,6 +87,10 @@ const Dashboard = () => {
       fetchClients();
       fetchAvatars();
       fetchRecentCompanies();
+      fetchUsageData(7);
+      fetchUsageData(30);
+      fetchVoiceData(7);
+      fetchVoiceData(30);
     }
     if (isClient && user?.client_id) {
       fetchClientBots();
@@ -206,6 +205,166 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error fetching client conversations:', error);
+    }
+  };
+
+  const fetchUsageData = async (days) => {
+    try {
+      setUsageDataLoading(true);
+      console.log(`🔍 Fetching usage data for ${days} days...`);
+      console.log('Current user:', user);
+      console.log('User role:', user?.role);
+      
+      // Fetch both voice and chat data separately
+      const [voiceResponse, chatResponse] = await Promise.all([
+        api.get('/api/analytics/voice-minutes-over-time', { params: { days } }),
+        api.get('/api/analytics/conversations-over-time', { params: { days, channel: 'chat' } })
+      ]);
+      
+      console.log('✅ Voice minutes response:', voiceResponse.data);
+      console.log('✅ Chat sessions response:', chatResponse.data);
+      
+      // Process data to get total minutes and session counts by date
+      const processedData = {
+        labels: [],
+        minutes: [], // Total voice minutes
+        text: []     // Chat session counts
+      };
+      
+      // Create maps for both datasets
+      const voiceMap = new Map();
+      const chatMap = new Map();
+      
+      // Process voice minutes data
+      voiceResponse.data.forEach(item => {
+        const date = item._id;
+        const minutes = parseFloat(item.minutes) || 0;
+        console.log(`Date: ${date}, Voice Minutes: ${minutes}`);
+        voiceMap.set(date, minutes);
+      });
+      
+      // Process chat sessions data
+      chatResponse.data.forEach(item => {
+        const date = item._id;
+        const count = parseInt(item.count) || 0;
+        console.log(`Date: ${date}, Chat Sessions: ${count}`);
+        chatMap.set(date, count);
+      });
+      
+      // Get all unique dates
+      const allDates = new Set([...voiceMap.keys(), ...chatMap.keys()]);
+      const sortedDates = Array.from(allDates).sort();
+      
+      processedData.labels = sortedDates.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      });
+      processedData.minutes = sortedDates.map(date => {
+        const value = voiceMap.get(date) || 0;
+        console.log(`Final mapping - Date: ${date}, Voice Minutes: ${value}`);
+        return value;
+      });
+      processedData.text = sortedDates.map(date => {
+        const value = chatMap.get(date) || 0;
+        console.log(`Final mapping - Date: ${date}, Chat Sessions: ${value}`);
+        return value;
+      });
+      
+      console.log('✅ Processed usage data:', processedData);
+      console.log('✅ Voice map:', Object.fromEntries(voiceMap));
+      console.log('✅ Chat map:', Object.fromEntries(chatMap));
+      console.log('✅ Sorted dates:', sortedDates);
+      
+      setUsageData(prev => ({
+        ...prev,
+        [days]: processedData
+      }));
+    } catch (error) {
+      console.error('❌ Error fetching usage data:', error);
+      console.error('Error response:', error.response);
+      console.error('Error status:', error.response?.status);
+      console.error('Error message:', error.response?.data);
+      toast.error('Failed to fetch usage data');
+    } finally {
+      setUsageDataLoading(false);
+    }
+  };
+
+  const fetchVoiceData = async (days) => {
+    try {
+      setVoiceDataLoading(true);
+      console.log(`🔍 Fetching voice data for ${days} days...`);
+      
+      // Fetch both voice minutes and voice call counts
+      const [minutesResponse, callsResponse] = await Promise.all([
+        api.get('/api/analytics/voice-minutes-over-time', { params: { days } }),
+        api.get('/api/analytics/conversations-over-time', { params: { days, channel: 'voice' } })
+      ]);
+      
+      console.log('✅ Voice minutes response:', minutesResponse.data);
+      console.log('✅ Voice calls response:', callsResponse.data);
+      
+      // Process voice data to separate minutes and call counts
+      const processedData = {
+        labels: [],
+        minutes: [],
+        calls: []
+      };
+      
+      // Create maps for both datasets
+      const minutesMap = new Map();
+      const callsMap = new Map();
+      
+      // Process minutes data
+      minutesResponse.data.forEach(item => {
+        const date = item._id;
+        const minutes = parseFloat(item.minutes) || 0;
+        console.log(`Date: ${date}, Minutes: ${minutes}`);
+        minutesMap.set(date, minutes);
+      });
+      
+      // Process calls data
+      callsResponse.data.forEach(item => {
+        const date = item._id;
+        const count = parseInt(item.count) || 0;
+        console.log(`Date: ${date}, Calls: ${count}`);
+        callsMap.set(date, count);
+      });
+      
+      // Get all unique dates
+      const allDates = new Set([...minutesMap.keys(), ...callsMap.keys()]);
+      const sortedDates = Array.from(allDates).sort();
+      
+      processedData.labels = sortedDates.map(date => {
+        const d = new Date(date);
+        return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      });
+      processedData.minutes = sortedDates.map(date => {
+        const value = minutesMap.get(date) || 0;
+        console.log(`Final mapping - Date: ${date}, Minutes: ${value}`);
+        return value;
+      });
+      processedData.calls = sortedDates.map(date => {
+        const value = callsMap.get(date) || 0;
+        console.log(`Final mapping - Date: ${date}, Calls: ${value}`);
+        return value;
+      });
+      
+      console.log('✅ Processed voice data:', processedData);
+      console.log('✅ Minutes map:', Object.fromEntries(minutesMap));
+      console.log('✅ Calls map:', Object.fromEntries(callsMap));
+      console.log('✅ Sorted dates:', sortedDates);
+      
+      setVoiceData(prev => ({
+        ...prev,
+        [days]: processedData
+      }));
+    } catch (error) {
+      console.error('❌ Error fetching voice data:', error);
+      console.error('Error response:', error.response);
+      toast.error('Failed to fetch voice data');
+    } finally {
+      setVoiceDataLoading(false);
     }
   };
 
@@ -439,56 +598,305 @@ const Dashboard = () => {
 
             {/* Usage Chart */}
             <Card className="bg-white shadow-lg">
-              <CardBody>
-                <div className="flex items-center justify-between mb-4">
-                  <Typography variant="h5" color="blue-gray" className="font-semibold">
-                    Usage Details (Minutes/Text)
+              <CardBody className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Typography variant="h6" color="blue-gray" className="font-semibold">
+                    Voice Minutes & Chat Sessions
                   </Typography>
                   <div className="flex gap-2">
                     {['7', '30'].map((range) => (
                       <button
                         key={range}
-                        className={`px-4 py-1 rounded-lg text-sm font-semibold border transition-colors ${
+                        className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
                           usageRange === range
                             ? 'bg-blue-600 text-white border-blue-600'
                             : 'bg-white text-blue-600 border-blue-300 hover:bg-blue-50'
                         }`}
-                        onClick={() => setUsageRange(range)}
+                        onClick={() => {
+                          setUsageRange(range);
+                          if (!usageData[range]?.labels?.length) {
+                            fetchUsageData(range);
+                          }
+                        }}
                       >
                         Last {range} Days
                       </button>
                     ))}
                   </div>
                 </div>
-                <Line
-                  data={{
-                    labels: usageData[usageRange].labels,
-                    datasets: [
-                      {
-                        label: 'Minutes',
-                        data: usageData[usageRange].minutes,
-                        borderColor: '#2563eb',
-                        backgroundColor: 'rgba(37,99,235,0.1)',
-                        tension: 0.4,
-                        fill: true,
+                {usageDataLoading ? (
+                  <div className="flex items-center justify-center h-48">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                      <p className="text-gray-600 text-sm">Loading usage data...</p>
+                    </div>
+                  </div>
+                ) : usageData[usageRange]?.labels?.length > 0 ? (
+                  <div className="h-64">
+                    <Line
+                    data={{
+                      labels: usageData[usageRange].labels,
+                      datasets: [
+                        {
+                          label: 'Voice Minutes',
+                          data: usageData[usageRange].minutes,
+                          borderColor: '#2563eb',
+                          backgroundColor: 'rgba(37,99,235,0.1)',
+                          tension: 0.4,
+                          fill: false,
+                          borderWidth: 2,
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                        },
+                        {
+                          label: 'Chat Sessions',
+                          data: usageData[usageRange].text,
+                          borderColor: '#f59e42',
+                          backgroundColor: 'rgba(245,158,66,0.1)',
+                          tension: 0.4,
+                          fill: false,
+                          borderWidth: 2,
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      plugins: { 
+                        legend: { 
+                          position: 'top',
+                          labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                              size: 12,
+                              weight: 'bold'
+                            }
+                          }
+                        }, 
+                        title: { display: false },
+                        tooltip: {
+                          mode: 'index',
+                          intersect: false,
+                          backgroundColor: 'rgba(0,0,0,0.8)',
+                          titleColor: '#fff',
+                          bodyColor: '#fff',
+                          borderColor: '#2563eb',
+                          borderWidth: 1,
+                          titleFont: { size: 12 },
+                          bodyFont: { size: 11 },
+                          callbacks: {
+                            label: function(context) {
+                              const label = context.dataset.label || '';
+                              const value = context.parsed.y;
+                              return `${label}: ${value.toFixed(1)}`;
+                            }
+                          }
+                        }
                       },
-                      {
-                        label: 'Text',
-                        data: usageData[usageRange].text,
-                        borderColor: '#f59e42',
-                        backgroundColor: 'rgba(245,158,66,0.1)',
-                        tension: 0.4,
-                        fill: true,
+                      scales: { 
+                        y: { 
+                          beginAtZero: true,
+                          grid: {
+                            color: 'rgba(0,0,0,0.05)',
+                            drawBorder: false,
+                          },
+                          ticks: {
+                            font: {
+                              size: 11
+                            }
+                          }
+                        },
+                        x: {
+                          grid: {
+                            color: 'rgba(0,0,0,0.05)',
+                            drawBorder: false,
+                          },
+                          ticks: {
+                            font: {
+                              size: 11
+                            }
+                          }
+                        }
                       },
-                    ],
-                  }}
-                  options={{
-                    responsive: true,
-                    plugins: { legend: { position: 'top' }, title: { display: false } },
-                    scales: { y: { beginAtZero: true } },
-                  }}
-                  height={300}
-                />
+                      interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                      },
+                      elements: {
+                        point: {
+                          hoverBackgroundColor: '#2563eb',
+                          hoverBorderColor: '#fff',
+                          hoverBorderWidth: 2,
+                        }
+                      }
+                    }}
+                    height={250}
+                  />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-48">
+                    <div className="text-center">
+                      <div className="text-3xl mb-2">📊</div>
+                      <p className="text-gray-600 text-sm">No usage data available</p>
+                    </div>
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+
+            {/* Voice Minutes Over Time Chart */}
+            <Card className="bg-white shadow-lg mt-6">
+              <CardBody className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Typography variant="h6" color="blue-gray" className="font-semibold">
+                    Voice Analytics (Total Minutes/Calls)
+                  </Typography>
+                  <div className="flex gap-2">
+                    {['7', '30'].map((range) => (
+                      <button
+                        key={range}
+                        className={`px-3 py-1 rounded-md text-xs font-medium border transition-colors ${
+                          voiceRange === range
+                            ? 'bg-green-600 text-white border-green-600'
+                            : 'bg-white text-green-600 border-green-300 hover:bg-green-50'
+                        }`}
+                        onClick={() => {
+                          setVoiceRange(range);
+                          if (!voiceData[range]?.labels?.length) {
+                            fetchVoiceData(range);
+                          }
+                        }}
+                      >
+                        Last {range} Days
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {voiceDataLoading ? (
+                  <div className="flex items-center justify-center h-48">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2"></div>
+                      <p className="text-gray-600 text-sm">Loading voice data...</p>
+                    </div>
+                  </div>
+                ) : voiceData[voiceRange]?.labels?.length > 0 ? (
+                  <div className="h-64">
+                    <Line
+                      data={{
+                        labels: voiceData[voiceRange].labels,
+                        datasets: [
+                                                  {
+                          label: 'Total Voice Minutes',
+                          data: voiceData[voiceRange].minutes,
+                          borderColor: '#059669',
+                          backgroundColor: 'rgba(5,150,105,0.1)',
+                          tension: 0.4,
+                          fill: false,
+                          borderWidth: 2,
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                        },
+                        {
+                          label: 'Total Voice Calls',
+                          data: voiceData[voiceRange].calls,
+                          borderColor: '#dc2626',
+                          backgroundColor: 'rgba(220,38,38,0.1)',
+                          tension: 0.4,
+                          fill: false,
+                          borderWidth: 2,
+                          pointRadius: 4,
+                          pointHoverRadius: 6,
+                        },
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { 
+                          legend: { 
+                            position: 'top',
+                            labels: {
+                              usePointStyle: true,
+                              padding: 15,
+                              font: {
+                                size: 12,
+                                weight: 'bold'
+                              }
+                            }
+                          }, 
+                          title: { display: false },
+                                                  tooltip: {
+                          mode: 'index',
+                          intersect: false,
+                          backgroundColor: 'rgba(0,0,0,0.8)',
+                          titleColor: '#fff',
+                          bodyColor: '#fff',
+                          borderColor: '#059669',
+                          borderWidth: 1,
+                          titleFont: { size: 12 },
+                          bodyFont: { size: 11 },
+                          callbacks: {
+                            label: function(context) {
+                              const label = context.dataset.label || '';
+                              const value = context.parsed.y;
+                              return `${label}: ${value.toFixed(1)}`;
+                            }
+                          }
+                        }
+                        },
+                        scales: { 
+                          y: { 
+                            beginAtZero: true,
+                            grid: {
+                              color: 'rgba(0,0,0,0.05)',
+                              drawBorder: false,
+                            },
+                            ticks: {
+                              font: {
+                                size: 11
+                              }
+                            }
+                          },
+                          x: {
+                            grid: {
+                              color: 'rgba(0,0,0,0.05)',
+                              drawBorder: false,
+                            },
+                            ticks: {
+                              font: {
+                                size: 11
+                              }
+                            }
+                          }
+                        },
+                        interaction: {
+                          mode: 'nearest',
+                          axis: 'x',
+                          intersect: false
+                        },
+                        elements: {
+                          point: {
+                            hoverBackgroundColor: '#059669',
+                            hoverBorderColor: '#fff',
+                            hoverBorderWidth: 2,
+                          }
+                        }
+                      }}
+                      height={250}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-48">
+                    <div className="text-center">
+                      <div className="text-3xl mb-2">🎤</div>
+                      <p className="text-gray-600 text-sm">No voice data available</p>
+                    </div>
+                  </div>
+                )}
               </CardBody>
             </Card>
 

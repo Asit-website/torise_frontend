@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../admin/AdminLayout';
+import * as XLSX from 'xlsx';
 
 const Reports = () => {
   const { user } = useAuth();
@@ -119,6 +120,7 @@ const Reports = () => {
     if (selectAll) {
       setSelectedRows([]);
     } else {
+      // Select all from the current filtered data
       setSelectedRows(filteredData.map(item => item.call_sid));
     }
     setSelectAll(!selectAll);
@@ -268,6 +270,193 @@ const Reports = () => {
     ? new Date(Math.max(...validDates)).toISOString().split("T")[0]
     : "";
 
+  // CSV Export Function
+  const handleExport = () => {
+    // Get selected conversations from the filtered data
+    const selectedConversations = filteredData.filter(item => selectedRows.includes(item.call_sid));
+    
+    // If no rows are selected, show alert
+    if (selectedConversations.length === 0) {
+      alert('Please select at least one row to export.');
+      return;
+    }
+    
+    // Helper function to escape CSV values
+    const escapeCSV = (value) => {
+      if (value === null || value === undefined) return '""';
+      const stringValue = String(value);
+      // If value contains comma, quote, or newline, wrap in quotes and escape internal quotes
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return '"' + stringValue.replace(/"/g, '""') + '"';
+      }
+      return stringValue;
+    };
+    
+    // Helper function to format phone numbers
+    const formatPhoneNumber = (phone) => {
+      if (!phone) return '';
+      // If it's a number, format it as text to prevent scientific notation
+      if (typeof phone === 'number') {
+        return `"${phone}"`;
+      }
+      return phone;
+    };
+    
+    // Helper function to format dates
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      } catch (error) {
+        return dateString;
+      }
+    };
+    
+    // Convert to CSV with proper formatting
+    const csvRows = [
+      [
+        "Call SID",
+        "Application SID", 
+        "Channel Type",
+        "From Number",
+        "To Number",
+        "Attempted At",
+        "Answered",
+        "Answered At",
+        "Terminated At",
+        "Duration",
+        "Message Count"
+      ],
+      ...selectedConversations.map(item => [
+        escapeCSV(item.call_sid || ''),
+        escapeCSV(item.application_sid || ''),
+        escapeCSV(item.channel_type || ''),
+        formatPhoneNumber(item.from_number || ''),
+        formatPhoneNumber(item.to_number || ''),
+        escapeCSV(formatDate(item.started_at)),
+        escapeCSV(item.answered ? "Yes" : "No"),
+        escapeCSV(formatDate(item.answered_at)),
+        escapeCSV(formatDate(item.ended_at)),
+        escapeCSV(item.duration_minutes || ''),
+        escapeCSV((item.message_log || []).length)
+      ])
+    ];
+    
+    // Create CSV content with proper line endings
+    const csvContent = csvRows.map(row => row.join(',')).join('\r\n');
+    
+    // Create blob with proper encoding
+    const blob = new Blob(['\ufeff' + csvContent], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `client_conversation_logs_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    console.log(`Exported ${selectedConversations.length} selected conversations`);
+  };
+
+  // Excel Export Function
+  const handleExcelExport = () => {
+    // Get selected conversations from the filtered data
+    const selectedConversations = filteredData.filter(item => selectedRows.includes(item.call_sid));
+    
+    // If no rows are selected, show alert
+    if (selectedConversations.length === 0) {
+      alert('Please select at least one row to export.');
+      return;
+    }
+    
+    // Helper function to format dates
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      } catch (error) {
+        return dateString;
+      }
+    };
+    
+    // Prepare data for Excel
+    const excelData = selectedConversations.map(item => ({
+      'Call SID': item.call_sid || '',
+      'Application SID': item.application_sid || '',
+      'Channel Type': item.channel_type || '',
+      'From Number': item.from_number || '',
+      'To Number': item.to_number || '',
+      'Attempted At': formatDate(item.started_at),
+      'Answered': item.answered ? "Yes" : "No",
+      'Answered At': formatDate(item.answered_at),
+      'Terminated At': formatDate(item.ended_at),
+      'Duration': item.duration_minutes || '',
+      'Message Count': (item.message_log || []).length
+    }));
+    
+    // Create workbook and worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    
+    // Set column widths
+    const columnWidths = [
+      { wch: 25 }, // Call SID
+      { wch: 20 }, // Application SID
+      { wch: 12 }, // Channel Type
+      { wch: 15 }, // From Number
+      { wch: 15 }, // To Number
+      { wch: 20 }, // Attempted At
+      { wch: 8 },  // Answered
+      { wch: 20 }, // Answered At
+      { wch: 20 }, // Terminated At
+      { wch: 12 }, // Duration
+      { wch: 12 }  // Message Count
+    ];
+    worksheet['!cols'] = columnWidths;
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Conversation Logs');
+    
+    // Generate Excel file
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `client_conversation_logs_${new Date().toISOString().split('T')[0]}.xlsx`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    console.log(`Exported ${selectedConversations.length} selected conversations to Excel`);
+  };
+
   return (
     <AdminLayout>
       <div className="w-full max-w-7xl mx-auto">
@@ -322,11 +511,14 @@ const Reports = () => {
                       onClick={() => {
                         setFromDate("");
                         setToDate("");
+                        setDurationFilter("");
                         setFilteredData(conversationData);
+                        setSelectedRows([]);
+                        setSelectAll(false);
                       }}
-                      className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg shadow hover:bg-red-600 transition"
+                      className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg shadow hover:bg-red-600 transition flex items-center gap-2"
                     >
-                      Reset Filter
+                      🔄 Reset All Filters
                     </button>
                   </div>
                 </div>
@@ -344,6 +536,55 @@ const Reports = () => {
                 </div>
               </div>
             </div>
+
+            {/* Export Section */}
+            <div className="mb-4 flex items-center gap-4">
+              {selectedRows.length > 0 && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleExport}
+                    className="px-4 py-2 bg-blue-600 text-white rounded shadow hover:bg-blue-700 transition flex items-center gap-2"
+                  >
+                    📄 Export CSV ({selectedRows.length})
+                  </button>
+                  <button
+                    onClick={handleExcelExport}
+                    className="px-4 py-2 bg-green-600 text-white rounded shadow hover:bg-green-700 transition flex items-center gap-2"
+                  >
+                    📊 Export Excel ({selectedRows.length})
+                  </button>
+                </div>
+              )}
+              
+              {filteredData.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSelectedRows(filteredData.map(item => item.call_sid));
+                    setSelectAll(true);
+                  }}
+                  className="px-4 py-2 bg-purple-600 text-white rounded shadow hover:bg-purple-700 transition flex items-center gap-2"
+                >
+                  ☑️ Select All Visible ({filteredData.length})
+                </button>
+              )}
+              
+              {selectedRows.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSelectedRows([]);
+                    setSelectAll(false);
+                  }}
+                  className="px-4 py-2 bg-gray-500 text-white rounded shadow hover:bg-gray-600 transition flex items-center gap-2"
+                >
+                  ❌ Clear Selection
+                </button>
+              )}
+              
+              <span className="text-sm text-gray-600">
+                Showing {currentItems.length} of {filteredData.length} conversations
+              </span>
+            </div>
+
             {/* Table */}
             <div className="overflow-x-auto border border-gray-200 rounded-lg w-full">
               <table className="w-full min-w-[1200px] text-left">

@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import AdminLayout from './AdminLayout';
-import { Eye } from 'lucide-react';
+import { Eye, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 const Clients = () => {
   const { user } = useAuth();
@@ -238,6 +239,64 @@ const Clients = () => {
     setShowUserModal(true);
   };
 
+  const exportToExcel = () => {
+    try {
+      // Prepare data for export
+      const exportData = clients.map(client => ({
+        'Client Name': client.name || 'N/A',
+        'Industry': client.industry || 'N/A',
+        'Country': client.country || 'N/A',
+        'Contact Email': client.contact_email || 'N/A',
+        'Service': client.service || 'Standard',
+        'Status': client.status || 'N/A',
+        'Application SIDs': Array.isArray(client.application_sid) ? client.application_sid.join(', ') : client.application_sid || 'N/A',
+        'Supports Text': client.supports_text ? 'Yes' : 'No',
+        'Supports Voice': client.supports_voice ? 'Yes' : 'No',
+        'Default Language': client.default_language || 'N/A',
+        'Notes': client.notes || 'N/A',
+        'Created At': client.created_at ? new Date(client.created_at).toLocaleDateString() : 'N/A',
+        'Updated At': client.updated_at ? new Date(client.updated_at).toLocaleDateString() : 'N/A'
+      }));
+
+      // Create workbook and worksheet
+      const workbook = XLSX.utils.book_new();
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+
+      // Auto-size columns
+      const columnWidths = [
+        { wch: 20 }, // Client Name
+        { wch: 15 }, // Industry
+        { wch: 15 }, // Country
+        { wch: 25 }, // Contact Email
+        { wch: 15 }, // Service
+        { wch: 10 }, // Status
+        { wch: 30 }, // Application SIDs
+        { wch: 12 }, // Supports Text
+        { wch: 12 }, // Supports Voice
+        { wch: 15 }, // Default Language
+        { wch: 30 }, // Notes
+        { wch: 15 }, // Created At
+        { wch: 15 }  // Updated At
+      ];
+      worksheet['!cols'] = columnWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Clients');
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `clients_export_${date}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(workbook, filename);
+      
+      toast.success('Clients exported to Excel successfully!');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      toast.error('Failed to export clients to Excel');
+    }
+  };
+
   if (loading) {
     return (
       <AdminLayout>
@@ -261,13 +320,24 @@ const Clients = () => {
               <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
               <p className="text-gray-600">Manage all clients in the system</p>
             </div>
-            <button 
-              onClick={openCreateModal}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-            >
-              <span>+</span>
-              Add Client
-            </button>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={exportToExcel}
+                disabled={clients.length === 0}
+                className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                title="Export clients to Excel"
+              >
+                <Download className="h-4 w-4" />
+                Export to Excel
+              </button>
+              <button 
+                onClick={openCreateModal}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+              >
+                <span>+</span>
+                Add Client
+              </button>
+            </div>
           </div>
 
           {/* Clients Table */}
